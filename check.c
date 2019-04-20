@@ -11,6 +11,7 @@ void main()
   FILE *fps = fopen("sig.txt","w");
   FILE *fpf = fopen("fsig.txt","w");
   FILE *fpsi = fopen("isig.txt","w");
+  printf("YoYo\n");
 
   fftw_complex *in, *out;
   fftw_plan p;
