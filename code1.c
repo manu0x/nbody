@@ -23,6 +23,7 @@ double p[n*n*n][6];
 double grid[n*n*n];
 
 double fb, fb_a, omdmb, omdeb, a, at, a_t, a_tt, Vamp, ai, a0, da, ak, fbt, fb_a_t, a_t_t;
+int jprint;
 double H0, Hi;
 
 
@@ -38,7 +39,7 @@ int evolve(double ,double );
 void main()
 {       Mpl = 1.0/sqrt(8.0*3.142*G) ;
         da = 0.01;
-
+        jprint = (int) (1.0/da);
          
 
 	fpback  = fopen("back.txt","w");
@@ -271,10 +272,11 @@ int evolve(double aini, double astp)
     double w;
 
     int fail = 1,i;
+    double j,nd = (double) n;
     
 
     for(a=aini,i=0;(a<=astp)&&(fail==1);a+=da,++i)
-	{ if(i%100==0)
+	{ if(i%jprint==0)
 	   printf("a  %lf\n",a);
           
           Vvl = V(fb);
@@ -289,10 +291,22 @@ int evolve(double aini, double astp)
 
 	  fftw_execute(plan_psi_f);
 	  fftw_execute(plan_phi_f);
-	  fftw_execute(plan_psi_t_f);
-	  fftw_execute(plan_phi_t_f);
 	  fftw_execute(plan_f_f);
-	  fftw_execute(plan_f_t_f);
+
+           
+          #pragma omp parallel for
+	  for(j=0.0;j<nd;++j)
+	  {
+		ix = (int) (floor(j/(nd*nd)));
+		iy = (int) (floor(fmod(j,(nd*nd))/nd));
+		iz = 
+		
+
+
+	  }
+        
+          
+
 	
 	  Vvl = V(fbt);
   	  V_fvl = V_f(fbt);
