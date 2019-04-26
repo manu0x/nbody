@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h> 
+#include <omp.h>
 
 #define  n 64
 
@@ -36,13 +37,16 @@ int evolve(double ,double );
 
 void main()
 {       Mpl = 1.0/sqrt(8.0*3.142*G) ;
-        da = 0.001;
+        da = 0.01;
 
-
+         
 
 	fpback  = fopen("back.txt","w");
 
         int i;
+
+       // i = fftw_init_threads();
+	//	fftw_plan_with_nthreads(omp_get_max_threads());
 
 	psi = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
 	psik = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
@@ -270,7 +274,7 @@ int evolve(double aini, double astp)
     
 
     for(a=aini,i=0;(a<=astp)&&(fail==1);a+=da,++i)
-	{ if(i%1000==0)
+	{ if(i%100==0)
 	   printf("a  %lf\n",a);
           
           Vvl = V(fb);
@@ -284,12 +288,12 @@ int evolve(double aini, double astp)
 	  at = a + 0.5*da;
 
 	  fftw_execute(plan_psi_f);
-	/*fftw_execute(plan_phi_f);
+	  fftw_execute(plan_phi_f);
 	  fftw_execute(plan_psi_t_f);
 	  fftw_execute(plan_phi_t_f);
 	  fftw_execute(plan_f_f);
 	  fftw_execute(plan_f_t_f);
-	*/
+	
 	  Vvl = V(fbt);
   	  V_fvl = V_f(fbt);
 	  a_t = sqrt((ommi*ai*ai*ai/at  + (1.0/(Mpl*Mpl))*at*at*Vvl/(3.0*c)) / ( 1.0 - (1.0/(Mpl*Mpl))*at*at*fb_a_t*fb_a_t/(6.0*c*c*c))) ;
