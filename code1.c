@@ -299,7 +299,7 @@ int evolve(double aini, double astp)
 	  {
 		ix = (int) (floor(j/(nd*nd)));
 		iy = (int) (floor(fmod(j,(nd*nd))/nd));
-		iz = 
+		iz = (int) (j-((double) ix)*nd*nd-((double) iy)*nd);
 		
 
 
