@@ -12,12 +12,10 @@ double Mpl ;
 double H0  = 22.04*(1e-5);
 
 
-fftw_complex *psi, *phi, *f,*psi_t, *phi_t, *f_t,*tul00,*tuldss;
-fftw_complex *psik, *phik, *fk,*psik_t, *phik_t, *fk_t,*tul00k,*tuldssk;
+double *psi, *phi, *f,*psi_t, *phi_t, *f_t,*tul00,*tuldss;
+double *psik, *phik, *fk,*psik_t, *phik_t, *fk_t,*tul00k,*tuldssk;
 
-fftw_plan plan_psi_f, plan_phi_f, plan_f_f, plan_psi_t_f, plan_phi_t_f, plan_f_t_f, 
-          plan_psi_b, plan_phi_b, plan_f_b, plan_psi_t_b, plan_phi_t_b, plan_f_t_b, 
-	  plan_tul00_f, plan_tuldss_f, plan_tul00_b, plan_tuldss_b;
+
 
 double p[n*n*n][6];
 double grid[n*n*n];
@@ -49,46 +47,6 @@ void main()
        // i = fftw_init_threads();
 	//	fftw_plan_with_nthreads(omp_get_max_threads());
 
-	psi = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	psik = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	plan_psi_f = fftw_plan_dft_3d(n,n,n, psi, psik, FFTW_FORWARD, FFTW_MEASURE);
-	plan_psi_b = fftw_plan_dft_3d(n,n,n, psik, psi, FFTW_BACKWARD, FFTW_MEASURE);
-
-        phi = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	phik = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	plan_phi_f = fftw_plan_dft_3d(n,n,n, phi, phik, FFTW_FORWARD, FFTW_MEASURE);
-	plan_phi_b = fftw_plan_dft_3d(n,n,n, phik, phi, FFTW_BACKWARD, FFTW_MEASURE);
-
-	psi_t = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	psik_t = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	plan_psi_t_f = fftw_plan_dft_3d(n,n,n, psi_t, psik_t, FFTW_FORWARD, FFTW_MEASURE);
-	plan_psi_t_b = fftw_plan_dft_3d(n,n,n, psik_t, psi_t, FFTW_BACKWARD, FFTW_MEASURE);
-
-        phi_t = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	phik_t = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	plan_phi_t_f = fftw_plan_dft_3d(n,n,n, phi_t, phik_t, FFTW_FORWARD, FFTW_MEASURE);
-	plan_phi_t_b = fftw_plan_dft_3d(n,n,n, phik_t, phi_t, FFTW_BACKWARD, FFTW_MEASURE);
-
-	f_t = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	fk_t = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	plan_f_t_f = fftw_plan_dft_3d(n,n,n, f_t, fk_t, FFTW_FORWARD, FFTW_MEASURE);
-	plan_f_t_b = fftw_plan_dft_3d(n,n,n, fk_t, f_t, FFTW_BACKWARD, FFTW_MEASURE);
-
-	f = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	fk = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	plan_f_f = fftw_plan_dft_3d(n,n,n, f, fk, FFTW_FORWARD, FFTW_MEASURE);
-	plan_f_b = fftw_plan_dft_3d(n,n,n, fk, f, FFTW_BACKWARD, FFTW_MEASURE);
-
-	tul00 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	tul00k = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	plan_tul00_f = fftw_plan_dft_3d(n,n,n, tul00, tul00k, FFTW_FORWARD, FFTW_MEASURE);
-	plan_tul00_b = fftw_plan_dft_3d(n,n,n, tul00k, tul00, FFTW_BACKWARD, FFTW_MEASURE);
-
-	tuldss = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	tuldssk = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	plan_tuldss_f = fftw_plan_dft_3d(n,n,n, tuldss, tuldssk, FFTW_FORWARD, FFTW_MEASURE);
-	plan_tuldss_b = fftw_plan_dft_3d(n,n,n, tuldssk, tuldss, FFTW_BACKWARD, FFTW_MEASURE);
-	
 	
 	
 
