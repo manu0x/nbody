@@ -257,7 +257,7 @@ int evolve(double aini, double astp)
     double lplPhi,lplPsi,lplf;
     
 
-    for(a=aini,i=0;(a<=astp)&&(fail==1);a+=da,++i)
+    for(a=aini,i=0;(a<=astp)&&(fail==1);++i)
 	{ if(i%jprint==0)
 	   printf("a  %lf\n",a);
           
@@ -334,19 +334,124 @@ int evolve(double aini, double astp)
                                                           -6.0*a*Psi[ci]*f_a[ci] - a*a*f_a[ci]*Psi[ci] )
 						      );
 
-                tmpPhi_a[ci] = Phi_a[ci] + 0.5*Phiacc*da;
+               
+		
+
+		tmpPhi_a[ci] = Phi_a[ci] + 0.5*Phiacc*da;
 		tmpf_a[ci] = f_a[ci] + 0.5*facc*da;
 
 		tmpPhi[ci] = Phi[ci] + 0.5*Phi_a*da;
 		tmpf[ci] = f[ci] + 0.5*f_a*da;
 
-		tmpPsi[ci] = 
+		
 		
 
 		
 
 		++jd;
 	  }
+
+
+		Vvl = V(fbt);
+  	  	V_fvl = V_f(fbt);
+	  	a_t = sqrt((ommi*ai*ai*ai/at  + (1.0/(Mpl*Mpl))*at*at*Vvl/(3.0*c)) / 
+                                                ( 1.0 - (1.0/(Mpl*Mpl))*at*at*fb_a_t*fb_a_t/(6.0*c*c*c))) ;
+          	a_tt = -0.5*ommi*ai*ai*ai/(at*at) - (1.0/(Mpl*Mpl*c))*at*(fb_a_t*fb_a_t*a_t*a_t - Vvl)/3.0;
+		facb = -V_fvl*c*c/(a_t*a_t) - 3.0*fb_a/a - a_tt*fb_a/(a_t*a_t);
+	  
+	  	fb = fb + da*fb_a;
+	  	fb_a = fb_a + da*facb;
+	  	a = a + da;
+
+
+
+	#pragma omp parallel for
+	  for(j=0;j<n;++j)
+	  {     jd = j;
+		ix = (int) (floor(jd/(nd*nd)));
+		iy = (int) (floor(fmod(jd,(nd*nd))/nd));
+		iz = (int) (jd-((double) ix)*nd*nd-((double) iy)*nd);
+		ci = ix*n*n+iy*n+iz;
+		cnxp1 = (n + (ix+1))%n;
+		cnxp2 = (n + (ix+2))%n;
+		cnxn1 = (n + (ix-1))%n;
+		cnxn2 = (n + (ix-2))%n;
+		cnyp1 = (n + (iy+1))%n;
+		cnyp2 = (n + (iy+2))%n;
+		cnyn1 = (n + (iy-1))%n;
+		cnyn2 = (n + (iy-2))%n;
+		cnzp1 = (n + (iz+1))%n;
+		cnzp2 = (n + (iz+2))%n;
+		cnzn1 = (n + (iz-1))%n;
+		cnzn2 = (n + (iz-2))%n;
+
+
+ 		
+
+
+		
+
+		lplPhi = (-tmpPhi[cnxn2]-16.0*tmpPhi[cnxn1]-30.0*tmpPhi[ci]+16.0*tmpPhi[cnxnp1]-tmpPhi[cnxp2])/(12.0*dx*dx) +
+			 (-tmpPhi[cnyn2]-16.0*tmpPhi[cnyn1]-30.0*tmpPhi[ci]+16.0*tmpPhi[cnynp1]-tmpPhi[cnyp2])/(12.0*dy*dy) +
+			 (-tmpPhi[cnzn2]-16.0*tmpPhi[cnzn1]-30.0*tmpPhi[ci]+16.0*tmpPhi[cnznp1]-tmpPhi[cnzp2])/(12.0*dz*dz)   ;
+
+		tmpPsi[ci] = (lplPhi - 0.5*tmptul00[ci]/(Mpl*Mpl) - 3.0*at*a_t*tmpPhi_a[ci]*a_t)/(3.0*a_t*a_t);
+		tmpPsi_a[ci] = (tmpPsi[ci]-Psi[ci])/(0.5*da);
+
+		lplPsi = (-tmpPsi[cnxn2]-16.0*tmpPsi[cnxn1]-30.0*tmpPsi[ci]+16.0*tmpPsi[cnxnp1]-tmpPsi[cnxp2])/(12.0*dx*dx) +
+			 (-tmpPsi[cnyn2]-16.0*tmpPsi[cnyn1]-30.0*tmpPsi[ci]+16.0*tmpPsi[cnynp1]-tmpPsi[cnyp2])/(12.0*dy*dy) +
+			 (-tmpPsi[cnzn2]-16.0*tmpPsi[cnzn1]-30.0*tmpPsi[ci]+16.0*tmpPsi[cnznp1]-tmpPsi[cnzp2])/(12.0*dz*dz)   ;
+
+		lplf = (-tmpf[cnxn2]-16.0*tmpf[cnxn1]-30.0*tmpf[ci]+16.0*tmpf[cnxnp1]-tmpf[cnxp2])/(12.0*dx*dx) +
+			 (-tmpf[cnyn2]-16.0*tmpf[cnyn1]-30.0*tmpf[ci]+16.0*tmpf[cnynp1]-tmpf[cnyp2])/(12.0*dy*dy) +
+			 (-tmpf[cnzn2]-16.0*tmpf[cnzn1]-30.0*tmpf[ci]+16.0*tmpf[cnznp1]-tmpf[cnzp2])/(12.0*dz*dz)   ;
+
+		Vvl = V(tmpf[ci]);
+  	  	V_fvl = V_f(tmpf[ci]);
+	
+		tmpPhiacc = (0.5/(a*a))*( -2.0*tmpPsi[ci] - 4.0*a*tmpPsi[ci]*a_tt/(a_t*a_t) - 6.0*a*tmpPhi_a[ci]- 2.0*a*tmpPsi_a[ci]  + 
+			               (2.0/3.0)*(lplPhi-lplPsi)/(a_t*a_t) - a*a*tuldss/(Mpl*3.0*(a_t*a_t)) - tmpPhi_a[ci]*a_tt/(a_t*a_t)
+                                      );
+
+		facc = (1.0/(a*a*(-1.0+2.0*tmpPsi[ci]))) *(  ( a*a*V_fvl 
+
+                                                           + (tmpf[cnxn2] - 8.0*tmpf[cnxn1] + 8.0*tmpf[cnxp1] - tmpf[cnxp2])*
+							     ((tmpPhi[cnxn2]-tmpPsi[cnxn2]) - 8.0*(tmpPhi[cnxn1]-tmpPsi[cnxn1])
+                                                               + 8.0*(tmpPhi[cnxp1]-tmpPsi[cnxp1]) - (tmpPhi[cnxp2]-tmpPsi[cnxp2]))/(dx*dx)
+
+							       + (tmpf[cnyn2] - 8.0*tmpf[cnyn1] + 8.0*tmpf[cnyp1] - tmpf[cnyp2])*
+							     ((tmpPhi[cnyn2]-tmpPsi[cnyn2]) - 8.0*(tmpPhi[cnyn1]-tmpPsi[cnyn1])
+                                                               + 8.0*(tmpPhi[cnyp1]-tmpPsi[cnyp1]) - (tmpPhi[cnyp2]-tmpPsi[cnyp2]))/(dy*dy)
+
+							       + (tmpf[cnzn2] - 8.0*tmpf[cnzn1] + 8.0*tmpf[cnzp1] - tmpf[cnzp2])*
+							     ((tmpPhi[cnzn2]-tmpPsi[cnzn2]) - 8.0*(tmpPhi[cnzn1]-tmpPsi[cnzn1])
+                                                               + 8.0*(tmpPhi[cnzp1]-tmpPsi[cnzp1]) - (tmpPhi[cnzp2]-tmpPsi[cnzp2]))/(dz*dz)  
+				
+							   -lplf*(1.0+2.0*tmpPhi[ci])	- a_tt*tmpf_a[ci]
+                                                         )/(a_t*a_t)
+
+		                                        +   ( 3.0*a*tmpf_a[ci] - 3.0*a*a*tmpPhi_a[ci]*tmpf_a[ci] 
+                                                          -6.0*a*tmpPsi[ci]*tmpf_a[ci] - a*a*tmpf_a[ci]*tmpPsi[ci] )
+						      );
+
+                Phi_a[ci] = Phi_a[ci] + Phiacc*da;
+		f_a[ci] = f_a[ci] + facc*da;
+
+		Phi[ci] = Phi[ci] + tmpPhi_a[ci]*da;
+		f[ci] = f[ci] + tmpf_a[ci]*da;
+
+		Psi[ci] = Psi[ci] + tmpPsi_a[ci]*da;
+		Psi_a[ci] = (Psi[ci]-tmpPsi[ci])/(0.5*da);
+	
+
+		
+		
+
+		
+
+		++jd;
+	  }
+        
         
           
 
