@@ -23,6 +23,8 @@ double dx,dy,dz;
 double p[n*n*n][6];
 double grid[n*n*n];
 
+int nic[n*n*n][16];
+
 double fb, fb_a, omdmb, omdeb, a, at, a_t, a_tt, Vamp, ai, a0, da, ak, fbt, fb_a_t, a_t_t;
 int jprint;
 double H0, Hi;
@@ -32,6 +34,7 @@ FILE *fpback;
 
 
 void background();
+void neighindc();
 double V(double);
 double V_f(double);
 void initialise();
@@ -193,13 +196,58 @@ double V_f(double fff)
 
 }
 
+
+void neighindc()
+{
+	int i,ix,iy,iz;
+	double jd,nd;
+        nd = (double) nd;
+	
+	int nicx[4];
+	int nicz[4];
+	int nicy[4];
+
+	for(i=0;i<n;++i)
+	{
+		jd = (double) i;                
+		
+		ix = (int) (floor(jd/(nd*nd)));
+		iy = (int) (floor(fmod(jd,(nd*nd))/nd));
+		iz = (int) (jd-((double) ix)*nd*nd-((double) iy)*nd);
+
+		nicx[2] = (n + (ix+1))%n;
+		nicx[3] = (n + (ix+2))%n;
+		nicx[1] = (n + (ix-1))%n;
+		nicx[0] = (n + (ix-2))%n;
+
+		nicy[2] = (n + (iy+1))%n;
+		nicy[3] = (n + (iy+2))%n;
+		nicy[1] = (n + (iy-1))%n;
+		nicy[0] = (n + (iy-2))%n;
+
+		nicz[2] = (n + (iz+1))%n;
+		nicz[3] = (n + (iz+2))%n;
+		nicz[1] = (n + (iz-1))%n;
+		nicz[0] = (n + (iz-2))%n;
+
+		nicxy[i]  = (ix+1)*n*n+(iy+1)*n+nz
+
+
+         }
+
+
+
+
+}
+
+
 void initialise()
 {
-      int ix,iy,iz;
+      int ix,iy,iz,Vvl,V_fvl;
 
       double cpmc = (0.14/(0.68*0.68));
-      int px,py,pz;
-      double gamma, v;
+      int px,py,pz,ci,pci;
+      double gamma, v, gradmgf;
       a0 = 1000.0;
       ai = 1.0;
       fb = 1.0;
@@ -207,30 +255,30 @@ void initialise()
       omdmb= (cpmc)*pow((a0/ai),3.0)/(cpmc*a0*a0*a0/(ai*ai*ai) + (1.0-cpmc));
 
 	dx = 0.001; dy =0.001; dz = 0.001;
-        L = dx*((double) N); 
+        L = dx*((double) n); 
       
 	for(ix = 0;ix <n; ++ix)
 	{
 		for(iy = 0;iy <n; ++iy)
 		{
 			for(iz = 0;iz <n; ++iz)
-			{
+			{       ci = ix*n*n+iy*n+iz;
 				phi[ix*n*n+iy*n+iz] = (double) rand()/((double) RAND_MAX  );
       				
 				
 				psi[ix*n*n+iy*n+iz] = (double) rand()/((double) RAND_MAX  );
       				
 		
-				f[ix*n*n+iy*n+iz] = 1.0;
+				f[ix*n*n+iy*n+iz] = fb;
       				
 
-				phi_t[ix*n*n+iy*n+iz] = 0.0;
+				phi_a[ix*n*n+iy*n+iz] = 0.0;
       				
 				
-				psi_t[ix*n*n+iy*n+iz] = 0.0;
+				psi_a[ix*n*n+iy*n+iz] = 0.0;
       				
 		
-				f_t[ix*n*n+iy*n+iz] = 0.0;
+				f_a[ix*n*n+iy*n+iz] = fb_a;
 
 				p[ix*n*n+iy*n+iz][0] =  ((double) rand()/((double) RAND_MAX  ))*L;
 				px = (int)(p[ix*n*n+iy*n+iz][0]/dx);
@@ -239,79 +287,103 @@ void initialise()
 				p[ix*n*n+iy*n+iz][2] =  ((double) rand()/((double) RAND_MAX  ))*L;
 				pz = (int)(p[ix*n*n+iy*n+iz][3]/dx);
 
+				pci = px*n*n+py*n+pz;
+
 				p[ix*n*n+iy*n+iz][4] =  0.0;
 				p[ix*n*n+iy*n+iz][5] =  0.0;
 				p[ix*n*n+iy*n+iz][6] =  0.0;
 
 				v = sqrt(p[ix*n*n+iy*n+iz][3]*p[ix*n*n+iy*n+iz][3] + p[ix*n*n+iy*n+iz][4]*p[ix*n*n+iy*n+iz][4]
-                                         p[ix*n*n+iy*n+iz][5]*p[ix*n*n+iy*n+iz][5]);
+                                         + p[ix*n*n+iy*n+iz][5]*p[ix*n*n+iy*n+iz][5]);
 				gamma = 1.0/sqrt(1.0-a*a*v*v);
 
 
 //////////////////////////////////particle tul calculation begins/////////////////////////////////////////////////////////////////////////////////
 
 				
-      				tul00[px*n*n+py*n+pz]+=  m[ix*n*n+iy*n+iz]*gamma*(1.0 + 3.0*Phi[px*n*n+py*n+pz] - Psi[px*n*n+py*n+pz]  
-                                                            -gamma*gamma*(v*v*a*a*Phi[px*n*n+py*n+pz] + Psi[px*n*n+py*n+pz])  );
-				tul00[(px+1)*n*n+py*n+pz]+=  m[ix*n*n+iy*n+iz]*gamma*(1.0 + 3.0*Phi[(px+1)*n*n+py*n+pz] - Psi[(px+1)*n*n+py*n+pz]  
-                                                            -gamma*gamma*(v*v*a*a*Phi[(px+1)*n*n+py*n+pz] + Psi[(px+1)*n*n+py*n+pz])  );
-				tul00[px*n*n+(py+1)*n+pz]+=  m[ix*n*n+iy*n+iz]*gamma*(1.0 + 3.0*Phi[px*n*n+(py+1)*n+pz] - Psi[px*n*n+(py+1)*n+pz]  
-                                                            -gamma*gamma*(v*v*a*a*Phi[px*n*n+(py+1)*n+pz] + Psi[px*n*n+(py+1)*n+pz])  );
-				tul00[px*n*n+py*n+(pz+1)]+=  m[ix*n*n+iy*n+iz]*gamma*(1.0 + 3.0*Phi[px*n*n+py*n+(pz+1)] - Psi[px*n*n+py*n+(pz+1)]  
-                                                            -gamma*gamma*(v*v*a*a*Phi[px*n*n+py*n+(pz+1)] + Psi[px*n*n+py*n+(pz+1)])  );
-				tul00[(px+1)*n*n+(py+1)*n+pz]+= 
-                                                     m[ix*n*n+iy*n+iz]*gamma*(1.0 + 3.0*Phi[(px+1)*n*n+(py+1)*n+pz] - Psi[(px+1)*n*n+(py+1)*n+pz]  
-                                                            -gamma*gamma*(v*v*a*a*Phi[(px+1)*n*n+(py+1)*n+pz] + Psi[(px+1)*n*n+(py+1)*n+pz])  );
+      				tul00[px*n*n+py*n+pz]+= (1.0/(8.0))* m[ix*n*n+iy*n+iz]*gamma*(1.0 + 3.0*phi[px*n*n+py*n+pz] - psi[px*n*n+py*n+pz]  
+                                                            -gamma*gamma*(v*v*a*a*phi[px*n*n+py*n+pz] + psi[px*n*n+py*n+pz])  );
+		tul00[(px+1)*n*n+py*n+pz]+=(1.0/(8.0))*  m[ix*n*n+iy*n+iz]*gamma*(1.0 + 3.0*phi[(px+1)*n*n+py*n+pz] - psi[(px+1)*n*n+py*n+pz]  
+                                                            -gamma*gamma*(v*v*a*a*phi[(px+1)*n*n+py*n+pz] + psi[(px+1)*n*n+py*n+pz])  );
+		tul00[px*n*n+(py+1)*n+pz]+=(1.0/(8.0))*  m[ix*n*n+iy*n+iz]*gamma*(1.0 + 3.0*phi[px*n*n+(py+1)*n+pz] - psi[px*n*n+(py+1)*n+pz]  
+                                                            -gamma*gamma*(v*v*a*a*phi[px*n*n+(py+1)*n+pz] + psi[px*n*n+(py+1)*n+pz])  );
+		tul00[px*n*n+py*n+(pz+1)]+=  (1.0/(8.0))*m[ix*n*n+iy*n+iz]*gamma*(1.0 + 3.0*phi[px*n*n+py*n+(pz+1)] - psi[px*n*n+py*n+(pz+1)]  
+                                                            -gamma*gamma*(v*v*a*a*phi[px*n*n+py*n+(pz+1)] + psi[px*n*n+py*n+(pz+1)])  );
+		tul00[(px+1)*n*n+(py+1)*n+pz]+= 
+                                      (1.0/(8.0))* m[ix*n*n+iy*n+iz]*gamma*(1.0 + 3.0*phi[(px+1)*n*n+(py+1)*n+pz] - psi[(px+1)*n*n+(py+1)*n+pz]  
+                                                            -gamma*gamma*(v*v*a*a*phi[(px+1)*n*n+(py+1)*n+pz] + psi[(px+1)*n*n+(py+1)*n+pz])  );
 				tul00[(px+1)*n*n+py*n+(pz+1)]+= 
-						     m[ix*n*n+iy*n+iz]*gamma*(1.0 + 3.0*Phi[(px+1)*n*n+py*n+(pz+1)] - Psi[(px+1)*n*n+py*n+(pz+1)]  
-                                                            -gamma*gamma*(v*v*a*a*Phi[(px+1)*n*n+py*n+(pz+1)] + Psi[(px+1)*n*n+py*n+(pz+1)])  );
+					(1.0/(8.0))*m[ix*n*n+iy*n+iz]*gamma*(1.0 + 3.0*phi[(px+1)*n*n+py*n+(pz+1)] - psi[(px+1)*n*n+py*n+(pz+1)]  
+                                                            -gamma*gamma*(v*v*a*a*phi[(px+1)*n*n+py*n+(pz+1)] + psi[(px+1)*n*n+py*n+(pz+1)])  );
 				tul00[px*n*n+(py+1)*n+(pz+1)]+=  
-						     m[ix*n*n+iy*n+iz]*gamma*(1.0 + 3.0*Phi[px*n*n+(py+1)*n+(pz+1)] - Psi[px*n*n+(py+1)*n+(pz+1)]  
-                                                            -gamma*gamma*(v*v*a*a*Phi[px*n*n+(py+1)*n+(pz+1)] + Psi[px*n*n+(py+1)*n+(pz+1)])  );
+					(1.0/(8.0))*m[ix*n*n+iy*n+iz]*gamma*(1.0 + 3.0*phi[px*n*n+(py+1)*n+(pz+1)] - psi[px*n*n+(py+1)*n+(pz+1)]  
+                                                            -gamma*gamma*(v*v*a*a*phi[px*n*n+(py+1)*n+(pz+1)] + psi[px*n*n+(py+1)*n+(pz+1)])  );
 				tul00[(px+1)*n*n+(py+1)*n+(pz+1)]+=  
-					m[ix*n*n+iy*n+iz]*gamma*(1.0 + 3.0*Phi[(px+1)*n*n+(py+1)*n+(pz+1)] - Psi[(px+1)*n*n+(py+1)*n+(pz+1)]  
-                                                    -gamma*gamma*(v*v*a*a*Phi[(px+1)*n*n+(py+1)*n+(pz+1)] + Psi[(px+1)*n*n+(py+1)*n+(pz+1)])  );
+				(1.0/(8.0))*m[ix*n*n+iy*n+iz]*gamma*(1.0 + 3.0*phi[(px+1)*n*n+(py+1)*n+(pz+1)] - psi[(px+1)*n*n+(py+1)*n+(pz+1)]  
+                                                    -gamma*gamma*(v*v*a*a*phi[(px+1)*n*n+(py+1)*n+(pz+1)] + psi[(px+1)*n*n+(py+1)*n+(pz+1)])  );
 //////////////////////////////////////diagonal sum of spatial tu//////////////////////////////////////////////////////////////////////////////////
-				tuldss[px*n*n+py*n+pz]+= (1.0/(18.0))*m[ix*n*n+iy*n+iz]*gamma*v*v*
-								(1.0 + 3.0*Phi[px*n*n+py*n+pz] - Psi[px*n*n+py*n+pz]  
-                                                            -gamma*v*v*gamma*v*v*(v*v*a*a*Phi[px*n*n+py*n+pz] + Psi[px*n*n+py*n+pz])  );
+				tuldss[px*n*n+py*n+pz]+= (1.0/(24.0))*m[ix*n*n+iy*n+iz]*gamma*v*v*
+								(1.0 + 3.0*phi[px*n*n+py*n+pz] - psi[px*n*n+py*n+pz]  
+                                                            -gamma*v*v*gamma*v*v*(v*v*a*a*phi[px*n*n+py*n+pz] + psi[px*n*n+py*n+pz])  );
 				tuldss[(px+1)*n*n+py*n+pz]+= 
-						         (1.0/(18.0))*m[ix*n*n+iy*n+iz]*gamma*v*v*
-									(1.0 + 3.0*Phi[(px+1)*n*n+py*n+pz] - Psi[(px+1)*n*n+py*n+pz]  
-                                                           -gamma*v*v*gamma*v*v*(v*v*a*a*Phi[(px+1)*n*n+py*n+pz] + Psi[(px+1)*n*n+py*n+pz])  );
+						         (1.0/(24.0))*m[ix*n*n+iy*n+iz]*gamma*v*v*
+									(1.0 + 3.0*phi[(px+1)*n*n+py*n+pz] - psi[(px+1)*n*n+py*n+pz]  
+                                                           -gamma*v*v*gamma*v*v*(v*v*a*a*phi[(px+1)*n*n+py*n+pz] + psi[(px+1)*n*n+py*n+pz])  );
 				tuldss[px*n*n+(py+1)*n+pz]+=  
-							 (1.0/(18.0))*m[ix*n*n+iy*n+iz]*gamma*v*v*
-									(1.0 + 3.0*Phi[px*n*n+(py+1)*n+pz] - Psi[px*n*n+(py+1)*n+pz]  
-                                                             -gamma*v*v*gamma*v*v*(v*v*a*a*Phi[px*n*n+(py+1)*n+pz] + Psi[px*n*n+(py+1)*n+pz])  );
+							 (1.0/(24.0))*m[ix*n*n+iy*n+iz]*gamma*v*v*
+									(1.0 + 3.0*phi[px*n*n+(py+1)*n+pz] - psi[px*n*n+(py+1)*n+pz]  
+                                                             -gamma*v*v*gamma*v*v*(v*v*a*a*phi[px*n*n+(py+1)*n+pz] + psi[px*n*n+(py+1)*n+pz])  );
 				tuldss[px*n*n+py*n+(pz+1)]+=  
-							(1.0/(18.0))*m[ix*n*n+iy*n+iz]*gamma*v*v*
-									(1.0 + 3.0*Phi[px*n*n+py*n+(pz+1)] - Psi[px*n*n+py*n+(pz+1)]  
-                                                            -gamma*v*v*gamma*v*v*(v*v*a*a*Phi[px*n*n+py*n+(pz+1)] + Psi[px*n*n+py*n+(pz+1)])  );
+							(1.0/(24.0))*m[ix*n*n+iy*n+iz]*gamma*v*v*
+									(1.0 + 3.0*phi[px*n*n+py*n+(pz+1)] - psi[px*n*n+py*n+(pz+1)]  
+                                                            -gamma*v*v*gamma*v*v*(v*v*a*a*phi[px*n*n+py*n+(pz+1)] + psi[px*n*n+py*n+(pz+1)])  );
 				tuldss[(px+1)*n*n+(py+1)*n+pz]+= 
-                                                 (1.0/(18.0))*m[ix*n*n+iy*n+iz]*gamma*v*v*
-								(1.0 + 3.0*Phi[(px+1)*n*n+(py+1)*n+pz] - Psi[(px+1)*n*n+(py+1)*n+pz]  
-                                                       -gamma*v*v*gamma*v*v*(v*v*a*a*Phi[(px+1)*n*n+(py+1)*n+pz] + Psi[(px+1)*n*n+(py+1)*n+pz])  );
+                                                 (1.0/(24.0))*m[ix*n*n+iy*n+iz]*gamma*v*v*
+								(1.0 + 3.0*phi[(px+1)*n*n+(py+1)*n+pz] - psi[(px+1)*n*n+(py+1)*n+pz]  
+                                                       -gamma*v*v*gamma*v*v*(v*v*a*a*phi[(px+1)*n*n+(py+1)*n+pz] + psi[(px+1)*n*n+(py+1)*n+pz])  );
 				tuldss[(px+1)*n*n+py*n+(pz+1)]+= 
-						 (1.0/(18.0))*m[ix*n*n+iy*n+iz]*gamma*v*v*
-									(1.0 + 3.0*Phi[(px+1)*n*n+py*n+(pz+1)] - Psi[(px+1)*n*n+py*n+(pz+1)]  
-                                                       -gamma*v*v*gamma*v*v*(v*v*a*a*Phi[(px+1)*n*n+py*n+(pz+1)] + Psi[(px+1)*n*n+py*n+(pz+1)])  );
+						 (1.0/(24.0))*m[ix*n*n+iy*n+iz]*gamma*v*v*
+									(1.0 + 3.0*phi[(px+1)*n*n+py*n+(pz+1)] - psi[(px+1)*n*n+py*n+(pz+1)]  
+                                                       -gamma*v*v*gamma*v*v*(v*v*a*a*phi[(px+1)*n*n+py*n+(pz+1)] + psi[(px+1)*n*n+py*n+(pz+1)])  );
 				tuldss[px*n*n+(py+1)*n+(pz+1)]+=  
-						 (1.0/(18.0))*m[ix*n*n+iy*n+iz]*gamma*v*v*
-								(1.0 + 3.0*Phi[px*n*n+(py+1)*n+(pz+1)] - Psi[px*n*n+(py+1)*n+(pz+1)]  
-                                                       -gamma*v*v*gamma*v*v*(v*v*a*a*Phi[px*n*n+(py+1)*n+(pz+1)] + Psi[px*n*n+(py+1)*n+(pz+1)])  );
+						 (1.0/(24.0))*m[ix*n*n+iy*n+iz]*gamma*v*v*
+								(1.0 + 3.0*phi[px*n*n+(py+1)*n+(pz+1)] - psi[px*n*n+(py+1)*n+(pz+1)]  
+                                                       -gamma*v*v*gamma*v*v*(v*v*a*a*phi[px*n*n+(py+1)*n+(pz+1)] + psi[px*n*n+(py+1)*n+(pz+1)])  );
 				tuldss[(px+1)*n*n+(py+1)*n+(pz+1)]+=  
 					(1.0/(18.0))*m[ix*n*n+iy*n+iz]*gamma*v*v*
-						(1.0 + 3.0*Phi[(px+1)*n*n+(py+1)*n+(pz+1)] - Psi[(px+1)*n*n+(py+1)*n+(pz+1)]  
-                                              -gamma*v*v*gamma*v*v*(v*v*a*a*Phi[(px+1)*n*n+(py+1)*n+(pz+1)] + Psi[(px+1)*n*n+(py+1)*n+(pz+1)])  );
+						(1.0 + 3.0*phi[(px+1)*n*n+(py+1)*n+(pz+1)] - psi[(px+1)*n*n+(py+1)*n+(pz+1)]  
+                                              -gamma*v*v*gamma*v*v*(v*v*a*a*phi[(px+1)*n*n+(py+1)*n+(pz+1)] + psi[(px+1)*n*n+(py+1)*n+(pz+1)])  );
 ///////////////////////////////////particle tul calculation end/////////////////////////////////////////////////////////////////////////////////
 
-									
+//////////////////////////////////////Quint field tul cal begins with tul00/////////////////////////////////////////////////////////////////////
+				Vvl = V(f[ix*n*n+iy*n+iz]);
+				grdmagf =  ((f[cnxn2] - 8.0*f[cnxn1] + 8.0*f[cnxp1] - f[cnxp2])*
+							    /(12.0*dx*dx))*((f[cnxn2] - 8.0*f[cnxn1] + 8.0*f[cnxp1] - f[cnxp2])*
+							    /(12.0*dx*dx))
+					   + ((f[cnyn2] - 8.0*f[cnyn1] + 8.0*f[cnyp1] - f[cnyp2])*
+							    /(12.0*dy*dy))*((f[cnyn2] - 8.0*f[cnyn1] + 8.0*f[cnyp1] - f[cnyp2])*
+							    /(12.0*dy*dy))
+					  + ((f[cnzn2] - 8.0*f[cnzn1] + 8.0*f[cnzp1] - f[cnzp2])*
+							    /(12.0*dz*dz))*((f[cnzn2] - 8.0*f[cnzn1] + 8.0*f[cnzp1] - f[cnzp2])*
+							    /(12.0*dz*dz));
+
+
+
+							       + (f[cnyn2] - 8.0*f[cnyn1] + 8.0*f[cnyp1] - f[cnyp2])*
+							     ((phi[cnyn2]-psi[cnyn2]) - 8.0*(phi[cnyn1]-psi[cnyn1])
+                                                               + 8.0*(phi[cnyp1]-psi[cnyp1]) - (phi[cnyp2]-psi[cnyp2]))/(12.0*dy*dy)
+
+							       + (f[cnzn2] - 8.0*f[cnzn1] + 8.0*f[cnzp1] - f[cnzp2])*
+							     ((phi[cnzn2]-psi[cnzn2]) - 8.0*(phi[cnzn1]-psi[cnzn1])
+                                                               + 8.0*(phi[cnzp1]-psi[cnzp1]) - (phi[cnzp2]-psi[cnzp2]))/(12.0*dz*dz) 
+
+				tul00[ix*n*n+iy*n+iz]  = Vvl + 0.5*fb_a[ix*n*n+iy*n+iz]*fb_a[ix*n*n+iy*n+iz]*a_t*a_t*(1.0-2.0*Psi[ix*n*n+iy*n+iz])
+							  + 0.5*grdmagf*(1.0+2.0*Phi[ix*n*n+iy*n+iz])/(a*a);
+				tuldss[ix*n*n+iy*n+iz] = Vvl - 0.5*fb_a[ix*n*n+iy*n+iz]*fb_a[ix*n*n+iy*n+iz]*a_t*a_t*(1.0-2.0*Psi[ix*n*n+iy*n+iz])
+							  + grdmagf*(1.0+2.0*Phi[ix*n*n+iy*n+iz])/(6.0*a*a);	
 		
 
-				tul00[ix*n*n+iy*n+iz] = (double) rand()/((double) RAND_MAX  );
-      				
-
-				tuldss[ix*n*n+iy*n+iz] = (double) rand()/((double) RAND_MAX  );
+				
 				
 	
       				
@@ -335,9 +407,9 @@ int evolve(double aini, double astp)
     int fail = 1,i,j;
 
     double nd = (double) n, jd;  ///Watch out for local vs global for parallelization
-    double Phiacc,facc,Vvl,V_fvl;
+    double phiacc,facc,Vvl,V_fvl;
     int ix,iy,iz,ci,cnxp1,cnxp2,cnxn1,cnxn2,cnyp1,cnyp2,cnyn1,cnyn2,cnzp1,cnzp2,cnzn1,cnzn2;
-    double lplPhi,lplPsi,lplf;
+    double lplphi,lplpsi,lplf;
     
 
     for(a=aini,i=0;(a<=astp)&&(fail==1);++i)
@@ -377,54 +449,54 @@ int evolve(double aini, double astp)
 		cnzn1 = (n + (iz-1))%n;
 		cnzn2 = (n + (iz-2))%n;
 
-		lplPhi = (-Phi[cnxn2]-16.0*Phi[cnxn1]-30.0*Phi[ci]+16.0*Phi[cnxnp1]-Phi[cnxp2])/(12.0*dx*dx) +
-			 (-Phi[cnyn2]-16.0*Phi[cnyn1]-30.0*Phi[ci]+16.0*Phi[cnynp1]-Phi[cnyp2])/(12.0*dy*dy) +
-			 (-Phi[cnzn2]-16.0*Phi[cnzn1]-30.0*Phi[ci]+16.0*Phi[cnznp1]-Phi[cnzp2])/(12.0*dz*dz)   ;
+		lplphi = (-phi[cnxn2]+16.0*phi[cnxn1]-30.0*phi[ci]+16.0*phi[cnxp1]-phi[cnxp2])/(12.0*dx*dx) +
+			 (-phi[cnyn2]+16.0*phi[cnyn1]-30.0*phi[ci]+16.0*phi[cnyp1]-phi[cnyp2])/(12.0*dy*dy) +
+			 (-phi[cnzn2]+16.0*phi[cnzn1]-30.0*phi[ci]+16.0*phi[cnzp1]-phi[cnzp2])/(12.0*dz*dz)   ;
 
-		lplPsi = (-Psi[cnxn2]-16.0*Psi[cnxn1]-30.0*Psi[ci]+16.0*Psi[cnxnp1]-Psi[cnxp2])/(12.0*dx*dx) +
-			 (-Psi[cnyn2]-16.0*Psi[cnyn1]-30.0*Psi[ci]+16.0*Psi[cnynp1]-Psi[cnyp2])/(12.0*dy*dy) +
-			 (-Psi[cnzn2]-16.0*Psi[cnzn1]-30.0*Psi[ci]+16.0*Psi[cnznp1]-Psi[cnzp2])/(12.0*dz*dz)   ;
+		lplpsi = (-psi[cnxn2]+16.0*psi[cnxn1]-30.0*psi[ci]+16.0*psi[cnxp1]-psi[cnxp2])/(12.0*dx*dx) +
+			 (-psi[cnyn2]+16.0*psi[cnyn1]-30.0*psi[ci]+16.0*psi[cnyp1]-psi[cnyp2])/(12.0*dy*dy) +
+			 (-psi[cnzn2]+16.0*psi[cnzn1]-30.0*psi[ci]+16.0*psi[cnzp1]-psi[cnzp2])/(12.0*dz*dz)   ;
 
-		lplf = (-f[cnxn2]-16.0*f[cnxn1]-30.0*f[ci]+16.0*f[cnxnp1]-f[cnxp2])/(12.0*dx*dx) +
-			 (-f[cnyn2]-16.0*f[cnyn1]-30.0*f[ci]+16.0*f[cnynp1]-f[cnyp2])/(12.0*dy*dy) +
-			 (-f[cnzn2]-16.0*f[cnzn1]-30.0*f[ci]+16.0*f[cnznp1]-f[cnzp2])/(12.0*dz*dz)   ;
+		lplf = (-f[cnxn2]+16.0*f[cnxn1]-30.0*f[ci]+16.0*f[cnxp1]-f[cnxp2])/(12.0*dx*dx) +
+			 (-f[cnyn2]+16.0*f[cnyn1]-30.0*f[ci]+16.0*f[cnyp1]-f[cnyp2])/(12.0*dy*dy) +
+			 (-f[cnzn2]+16.0*f[cnzn1]-30.0*f[ci]+16.0*f[cnzp1]-f[cnzp2])/(12.0*dz*dz)   ;
 
 		Vvl = V(f[ci]);
   	  	V_fvl = V_f(f[ci]);
 	
-		Phiacc = (0.5/(a*a))*( -2.0*Psi[ci] - 4.0*a*Psi[ci]*a_tt/(a_t*a_t) - 6.0*a*Phi_a[ci]- 2.0*a*Psi_a[ci]  + 
-			               (2.0/3.0)*(lplPhi-lplPsi)/(a_t*a_t) - a*a*tuldss/(Mpl*3.0*(a_t*a_t)) - Phi_a[ci]*a_tt/(a_t*a_t)
+		phiacc = (0.5/(a*a))*( -2.0*psi[ci] - 4.0*a*psi[ci]*a_tt/(a_t*a_t) - 6.0*a*phi_a[ci]- 2.0*a*psi_a[ci]  + 
+			               (2.0/3.0)*(lplphi-lplpsi)/(a_t*a_t) - a*a*tuldss[ci]/(Mpl*3.0*(a_t*a_t)) - phi_a[ci]*a_tt/(a_t*a_t)
                                       );
 
-		facc = (1.0/(a*a*(-1.0+2.0*Psi[ci]))) *(  ( a*a*V_fvl 
+		facc = (1.0/(a*a*(-1.0+2.0*psi[ci]))) *(  ( a*a*V_fvl 
 
                                                            + (f[cnxn2] - 8.0*f[cnxn1] + 8.0*f[cnxp1] - f[cnxp2])*
-							     ((Phi[cnxn2]-Psi[cnxn2]) - 8.0*(Phi[cnxn1]-Psi[cnxn1])
-                                                               + 8.0*(Phi[cnxp1]-Psi[cnxp1]) - (Phi[cnxp2]-Psi[cnxp2]))/(dx*dx)
+							     ((phi[cnxn2]-psi[cnxn2]) - 8.0*(phi[cnxn1]-psi[cnxn1])
+                                                               + 8.0*(phi[cnxp1]-psi[cnxp1]) - (phi[cnxp2]-psi[cnxp2]))/(12.0*dx*dx)
 
 							       + (f[cnyn2] - 8.0*f[cnyn1] + 8.0*f[cnyp1] - f[cnyp2])*
-							     ((Phi[cnyn2]-Psi[cnyn2]) - 8.0*(Phi[cnyn1]-Psi[cnyn1])
-                                                               + 8.0*(Phi[cnyp1]-Psi[cnyp1]) - (Phi[cnyp2]-Psi[cnyp2]))/(dy*dy)
+							     ((phi[cnyn2]-psi[cnyn2]) - 8.0*(phi[cnyn1]-psi[cnyn1])
+                                                               + 8.0*(phi[cnyp1]-psi[cnyp1]) - (phi[cnyp2]-psi[cnyp2]))/(12.0*dy*dy)
 
 							       + (f[cnzn2] - 8.0*f[cnzn1] + 8.0*f[cnzp1] - f[cnzp2])*
-							     ((Phi[cnzn2]-Psi[cnzn2]) - 8.0*(Phi[cnzn1]-Psi[cnzn1])
-                                                               + 8.0*(Phi[cnzp1]-Psi[cnzp1]) - (Phi[cnzp2]-Psi[cnzp2]))/(dz*dz)  
+							     ((phi[cnzn2]-psi[cnzn2]) - 8.0*(phi[cnzn1]-psi[cnzn1])
+                                                               + 8.0*(phi[cnzp1]-psi[cnzp1]) - (phi[cnzp2]-psi[cnzp2]))/(12.0*dz*dz)  
 				
-							   -lplf*(1.0+2.0*Phi[ci])	- a_tt*f_a[ci]
+							   -lplf*(1.0+2.0*phi[ci])	- a_tt*f_a[ci]
                                                          )/(a_t*a_t)
 
-		                                        +   ( 3.0*a*f_a[ci] - 3.0*a*a*Phi_a[ci]*f_a[ci] 
-                                                          -6.0*a*Psi[ci]*f_a[ci] - a*a*f_a[ci]*Psi[ci] )
+		                                        +   ( 3.0*a*f_a[ci] - 3.0*a*a*phi_a[ci]*f_a[ci] 
+                                                          -6.0*a*psi[ci]*f_a[ci] - a*a*f_a[ci]*psi[ci] )
 						      );
 
                
 		
 
-		tmpPhi_a[ci] = Phi_a[ci] + 0.5*Phiacc*da;
+		tmpphi_a[ci] = phi_a[ci] + 0.5*phiacc*da;
 		tmpf_a[ci] = f_a[ci] + 0.5*facc*da;
 
-		tmpPhi[ci] = Phi[ci] + 0.5*Phi_a*da;
-		tmpf[ci] = f[ci] + 0.5*f_a*da;
+		tmpphi[ci] = phi[ci] + 0.5*phi_a[ci]*da;
+		tmpf[ci] = f[ci] + 0.5*f_a[ci]*da;
 
 		
 		
@@ -474,57 +546,57 @@ int evolve(double aini, double astp)
 
 		
 
-		lplPhi = (-tmpPhi[cnxn2]-16.0*tmpPhi[cnxn1]-30.0*tmpPhi[ci]+16.0*tmpPhi[cnxnp1]-tmpPhi[cnxp2])/(12.0*dx*dx) +
-			 (-tmpPhi[cnyn2]-16.0*tmpPhi[cnyn1]-30.0*tmpPhi[ci]+16.0*tmpPhi[cnynp1]-tmpPhi[cnyp2])/(12.0*dy*dy) +
-			 (-tmpPhi[cnzn2]-16.0*tmpPhi[cnzn1]-30.0*tmpPhi[ci]+16.0*tmpPhi[cnznp1]-tmpPhi[cnzp2])/(12.0*dz*dz)   ;
+		lplphi = (-tmpphi[cnxn2]+16.0*tmpphi[cnxn1]-30.0*tmpphi[ci]+16.0*tmpphi[cnxp1]-tmpphi[cnxp2])/(12.0*dx*dx) +
+			 (-tmpphi[cnyn2]+16.0*tmpphi[cnyn1]-30.0*tmpphi[ci]+16.0*tmpphi[cnyp1]-tmpphi[cnyp2])/(12.0*dy*dy) +
+			 (-tmpphi[cnzn2]+16.0*tmpphi[cnzn1]-30.0*tmpphi[ci]+16.0*tmpphi[cnzp1]-tmpphi[cnzp2])/(12.0*dz*dz)   ;
 
-		tmpPsi[ci] = (lplPhi - 0.5*tmptul00[ci]/(Mpl*Mpl) - 3.0*at*a_t*tmpPhi_a[ci]*a_t)/(3.0*a_t*a_t);
-		tmpPsi_a[ci] = (tmpPsi[ci]-Psi[ci])/(0.5*da);
+		tmppsi[ci] = (lplphi - 0.5*tmptul00[ci]/(Mpl*Mpl) - 3.0*at*a_t*tmpphi_a[ci]*a_t)/(3.0*a_t*a_t);
+		tmppsi_a[ci] = (tmppsi[ci]-psi[ci])/(0.5*da);
 
-		lplPsi = (-tmpPsi[cnxn2]-16.0*tmpPsi[cnxn1]-30.0*tmpPsi[ci]+16.0*tmpPsi[cnxnp1]-tmpPsi[cnxp2])/(12.0*dx*dx) +
-			 (-tmpPsi[cnyn2]-16.0*tmpPsi[cnyn1]-30.0*tmpPsi[ci]+16.0*tmpPsi[cnynp1]-tmpPsi[cnyp2])/(12.0*dy*dy) +
-			 (-tmpPsi[cnzn2]-16.0*tmpPsi[cnzn1]-30.0*tmpPsi[ci]+16.0*tmpPsi[cnznp1]-tmpPsi[cnzp2])/(12.0*dz*dz)   ;
+		lplpsi = (-tmppsi[cnxn2]+16.0*tmppsi[cnxn1]-30.0*tmppsi[ci]+16.0*tmppsi[cnxp1]-tmppsi[cnxp2])/(12.0*dx*dx) +
+			 (-tmppsi[cnyn2]+16.0*tmppsi[cnyn1]-30.0*tmppsi[ci]+16.0*tmppsi[cnyp1]-tmppsi[cnyp2])/(12.0*dy*dy) +
+			 (-tmppsi[cnzn2]+16.0*tmppsi[cnzn1]-30.0*tmppsi[ci]+16.0*tmppsi[cnzp1]-tmppsi[cnzp2])/(12.0*dz*dz)   ;
 
-		lplf = (-tmpf[cnxn2]-16.0*tmpf[cnxn1]-30.0*tmpf[ci]+16.0*tmpf[cnxnp1]-tmpf[cnxp2])/(12.0*dx*dx) +
-			 (-tmpf[cnyn2]-16.0*tmpf[cnyn1]-30.0*tmpf[ci]+16.0*tmpf[cnynp1]-tmpf[cnyp2])/(12.0*dy*dy) +
-			 (-tmpf[cnzn2]-16.0*tmpf[cnzn1]-30.0*tmpf[ci]+16.0*tmpf[cnznp1]-tmpf[cnzp2])/(12.0*dz*dz)   ;
+		lplf = (-tmpf[cnxn2]+16.0*tmpf[cnxn1]-30.0*tmpf[ci]+16.0*tmpf[cnxp1]-tmpf[cnxp2])/(12.0*dx*dx) +
+			 (-tmpf[cnyn2]+16.0*tmpf[cnyn1]-30.0*tmpf[ci]+16.0*tmpf[cnyp1]-tmpf[cnyp2])/(12.0*dy*dy) +
+			 (-tmpf[cnzn2]+16.0*tmpf[cnzn1]-30.0*tmpf[ci]+16.0*tmpf[cnzp1]-tmpf[cnzp2])/(12.0*dz*dz)   ;
 
 		Vvl = V(tmpf[ci]);
   	  	V_fvl = V_f(tmpf[ci]);
 	
-		tmpPhiacc = (0.5/(a*a))*( -2.0*tmpPsi[ci] - 4.0*a*tmpPsi[ci]*a_tt/(a_t*a_t) - 6.0*a*tmpPhi_a[ci]- 2.0*a*tmpPsi_a[ci]  + 
-			               (2.0/3.0)*(lplPhi-lplPsi)/(a_t*a_t) - a*a*tuldss/(Mpl*3.0*(a_t*a_t)) - tmpPhi_a[ci]*a_tt/(a_t*a_t)
+		phiacc = (0.5/(a*a))*( -2.0*tmppsi[ci] - 4.0*a*tmppsi[ci]*a_tt/(a_t*a_t) - 6.0*a*tmpphi_a[ci]- 2.0*a*tmppsi_a[ci]  + 
+			               (2.0/3.0)*(lplphi-lplpsi)/(a_t*a_t) - a*a*tuldss[ci]/(Mpl*3.0*(a_t*a_t)) - tmpphi_a[ci]*a_tt/(a_t*a_t)
                                       );
 
-		facc = (1.0/(a*a*(-1.0+2.0*tmpPsi[ci]))) *(  ( a*a*V_fvl 
+		facc = (1.0/(a*a*(-1.0+2.0*tmppsi[ci]))) *(  ( a*a*V_fvl 
 
                                                            + (tmpf[cnxn2] - 8.0*tmpf[cnxn1] + 8.0*tmpf[cnxp1] - tmpf[cnxp2])*
-							     ((tmpPhi[cnxn2]-tmpPsi[cnxn2]) - 8.0*(tmpPhi[cnxn1]-tmpPsi[cnxn1])
-                                                               + 8.0*(tmpPhi[cnxp1]-tmpPsi[cnxp1]) - (tmpPhi[cnxp2]-tmpPsi[cnxp2]))/(dx*dx)
+							     ((tmpphi[cnxn2]-tmppsi[cnxn2]) - 8.0*(tmpphi[cnxn1]-tmppsi[cnxn1])
+                                                               + 8.0*(tmpphi[cnxp1]-tmppsi[cnxp1]) - (tmpphi[cnxp2]-tmppsi[cnxp2]))/(dx*dx)
 
 							       + (tmpf[cnyn2] - 8.0*tmpf[cnyn1] + 8.0*tmpf[cnyp1] - tmpf[cnyp2])*
-							     ((tmpPhi[cnyn2]-tmpPsi[cnyn2]) - 8.0*(tmpPhi[cnyn1]-tmpPsi[cnyn1])
-                                                               + 8.0*(tmpPhi[cnyp1]-tmpPsi[cnyp1]) - (tmpPhi[cnyp2]-tmpPsi[cnyp2]))/(dy*dy)
+							     ((tmpphi[cnyn2]-tmppsi[cnyn2]) - 8.0*(tmpphi[cnyn1]-tmppsi[cnyn1])
+                                                               + 8.0*(tmpphi[cnyp1]-tmppsi[cnyp1]) - (tmpphi[cnyp2]-tmppsi[cnyp2]))/(dy*dy)
 
 							       + (tmpf[cnzn2] - 8.0*tmpf[cnzn1] + 8.0*tmpf[cnzp1] - tmpf[cnzp2])*
-							     ((tmpPhi[cnzn2]-tmpPsi[cnzn2]) - 8.0*(tmpPhi[cnzn1]-tmpPsi[cnzn1])
-                                                               + 8.0*(tmpPhi[cnzp1]-tmpPsi[cnzp1]) - (tmpPhi[cnzp2]-tmpPsi[cnzp2]))/(dz*dz)  
+							     ((tmpphi[cnzn2]-tmppsi[cnzn2]) - 8.0*(tmpphi[cnzn1]-tmppsi[cnzn1])
+                                                               + 8.0*(tmpphi[cnzp1]-tmppsi[cnzp1]) - (tmpphi[cnzp2]-tmppsi[cnzp2]))/(dz*dz)  
 				
-							   -lplf*(1.0+2.0*tmpPhi[ci])	- a_tt*tmpf_a[ci]
+							   -lplf*(1.0+2.0*tmpphi[ci])	- a_tt*tmpf_a[ci]
                                                          )/(a_t*a_t)
 
-		                                        +   ( 3.0*a*tmpf_a[ci] - 3.0*a*a*tmpPhi_a[ci]*tmpf_a[ci] 
-                                                          -6.0*a*tmpPsi[ci]*tmpf_a[ci] - a*a*tmpf_a[ci]*tmpPsi[ci] )
+		                                        +   ( 3.0*a*tmpf_a[ci] - 3.0*a*a*tmpphi_a[ci]*tmpf_a[ci] 
+                                                          -6.0*a*tmppsi[ci]*tmpf_a[ci] - a*a*tmpf_a[ci]*tmppsi[ci] )
 						      );
 
-                Phi_a[ci] = Phi_a[ci] + Phiacc*da;
+                phi_a[ci] = phi_a[ci] + phiacc*da;
 		f_a[ci] = f_a[ci] + facc*da;
 
-		Phi[ci] = Phi[ci] + tmpPhi_a[ci]*da;
+		phi[ci] = phi[ci] + tmpphi_a[ci]*da;
 		f[ci] = f[ci] + tmpf_a[ci]*da;
 
-		Psi[ci] = Psi[ci] + tmpPsi_a[ci]*da;
-		Psi_a[ci] = (Psi[ci]-tmpPsi[ci])/(0.5*da);
+		psi[ci] = psi[ci] + tmppsi_a[ci]*da;
+		psi_a[ci] = (psi[ci]-tmppsi[ci])/(0.5*da);
 	
 
 		
