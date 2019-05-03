@@ -11,6 +11,7 @@ double c   = 1.0;
 double Mpl ;
 double H0  = 22.04*(1e-5);
 double L;
+int N;
 
 
 double *psi, *phi, *f,*psi_a, *phi_a, *f_a,*tul00,*tuldss;
@@ -44,6 +45,7 @@ void main()
 {       Mpl = 1.0/sqrt(8.0*3.142*G) ;
         da = 0.01;
         jprint = (int) (1.0/da);
+	N=n*n*n;
          
 
 	fpback  = fopen("back.txt","w");
@@ -203,34 +205,32 @@ void neighindc()
 	double jd,nd;
         nd = (double) nd;
 	
-	int nicx[4];
-	int nicz[4];
-	int nicy[4];
+	
 
 	for(i=0;i<n;++i)
 	{
-		jd = (double) i;                
+		               
 		
-		ix = (int) (floor(jd/(nd*nd)));
-		iy = (int) (floor(fmod(jd,(nd*nd))/nd));
-		iz = (int) (jd-((double) ix)*nd*nd-((double) iy)*nd);
+		
+		nic[i][0]  = (N+i-(n*n))%N;
+		nic[i][1]  = (N+i-(n))%N;
+		nic[i][2]  = (N+i-1)%N;
+		nic[i][3]  = (N+i+(n*n))%N;
+		nic[i][4]  = (N+i+(n))%N;
+		nic[i][5]  = (N+i+1)%N;
 
-		nicx[2] = (n + (ix+1))%n;
-		nicx[3] = (n + (ix+2))%n;
-		nicx[1] = (n + (ix-1))%n;
-		nicx[0] = (n + (ix-2))%n;
+		nic[i][6]  = (N+i-2*(n*n))%N;
+		nic[i][7]  = (N+i-2*(n))%N;
+		nic[i][8]  = (N+i-2)%N;
+		nic[i][9]  = (N+i+2*(n*n))%N;
+		nic[i][10]  = (N+i+2*(n))%N;
+		nic[i][11]  = (N+i+2)%N;
 
-		nicy[2] = (n + (iy+1))%n;
-		nicy[3] = (n + (iy+2))%n;
-		nicy[1] = (n + (iy-1))%n;
-		nicy[0] = (n + (iy-2))%n;
-
-		nicz[2] = (n + (iz+1))%n;
-		nicz[3] = (n + (iz+2))%n;
-		nicz[1] = (n + (iz-1))%n;
-		nicz[0] = (n + (iz-2))%n;
-
-		nicxy[i]  = (ix+1)*n*n+(iy+1)*n+nz
+		nic[i][12] = (i+(n*n)+n)%N
+		nic[i][13] = (i+n+1)%N
+		nic[i][14] = (i+(n*n)+1)%N
+		nic[i][15] = (N+i+(n*n)+n+1)%N
+		
 
 
          }
