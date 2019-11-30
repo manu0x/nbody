@@ -13,72 +13,53 @@ double H0  = 22.04*(1e-5);
 double L[3];
 int N;
 
-//Fields psi,phi(metric pot.),f(scalar field) and their temporal(w.r.t) gradient
+
 double *psi, *phi, *f,*psi_a, *phi_a, *f_a,*tul00,*tuldss;
-
-//Spatial gradients of fields, LAPxxx for storing laplacians, usty and psty are used in cosntructing psi
 double psi_s[3][n*n*n],phi_s[3][n*n*n],f_s[3][n*n*n],LAPphi[n*n*n],LAPpsi[n*n*n],LAPf[n*n*n],usty[n*n*n],psty[n*n*n];
-
-//Temporary fields during evolution
 double *tmppsi, *tmpphi, *tmpf,*tmppsi_a, *tmpphi_a, *tmpf_a,m;
-
-//Grid stepsize ...dx, dy and dz
 double dx[3];
-
-//particle variables
 struct particle
 	{	
 		double x[3];
-		double v[3];//Velocity w.r.t a so that actual velocity is v[]*a_t
+		double v[3];
 		
 		
-		int 	cubeind[8];	//indices of cube the particle is in currently
+		int 	cubeind[8];	
 
 	};
 
 
 
 struct particle p[n*n*n],tmpp[n*n*n];
-
-//Grid stores x,y,z values for grid
 double grid[n*n*n][3];
 int gridind[n*n*n][3];
 
+int nic[n*n*n][16];
 
-//background evolution variables
 double fb, fb_a, omdmb, omdeb, a, at, a_t, a_tt, Vamp, ai, a0, da, ak, fbt, fb_at;
 int jprint;
 double H0, Hi;
 
-//Background evolutionn data storage
 FILE *fpback;
 
-//Function doing background evolution and predicting Hi before perturbation evolution program is started
+
 void background();
 
-
-//Scalar field potential and it's gradient
 double V(double);
 double V_f(double);
 
-//Setting up initial conditions and Grid
+
 void initialise();
 
-//Function that takes a Field array and paricle index and calculates approximation at particle location
 double mesh2particle(struct particle *,int,double *);
-
-//Function that takes a particle info and field array info and calculates effective contribution of particle to mesh points
 void particle2mesh(struct particle * ,int ,double *,double *,double );
-
-
-//Fucntion that evolves system with perturbations
 int evolve(double ,double );
 
 void main()
-{       Mpl = 1.0/sqrt(8.0*3.142*G) ;//Planck mass
+{       Mpl = 1.0/sqrt(8.0*3.142*G) ;
         da = 0.01;
         jprint = (int) (1.0/da);
-	N=n*n*n;//Total grid points/ particles
+	N=n*n*n;
          
 
 	fpback  = fopen("back.txt","w");
@@ -88,14 +69,12 @@ void main()
        // i = fftw_init_threads();
 	//	fftw_plan_with_nthreads(omp_get_max_threads());
 
-	//Memory alllocation for fields
-
 	psi = (double *) malloc(n*n*n*sizeof(double)); 
         psi_a = (double *) malloc(n*n*n*sizeof(double)); 
 	phi = (double *) malloc(n*n*n*sizeof(double)); 
         phi_a = (double *) malloc(n*n*n*sizeof(double)); 
-	f = (double *) malloc(n*n*n*sizeof(double)); 
-        f_a = (double *) malloc(n*n*n*sizeof(double)); 
+	//f = (double *) malloc(n*n*n*sizeof(double)); 
+        //f_a = (double *) malloc(n*n*n*sizeof(double)); 
 	tul00 = (double *) malloc(n*n*n*sizeof(double)); 
         tuldss = (double *) malloc(n*n*n*sizeof(double));
 
@@ -103,8 +82,8 @@ void main()
         tmppsi_a = (double *) malloc(n*n*n*sizeof(double)); 
 	tmpphi = (double *) malloc(n*n*n*sizeof(double)); 
         tmpphi_a = (double *) malloc(n*n*n*sizeof(double)); 
-	tmpf = (double *) malloc(n*n*n*sizeof(double)); 
-        tmpf_a = (double *) malloc(n*n*n*sizeof(double)); 
+	//tmpf = (double *) malloc(n*n*n*sizeof(double)); 
+        //tmpf_a = (double *) malloc(n*n*n*sizeof(double)); 
  
 
 	//m = (double *) malloc(n*n*n*sizeof(double)); 
@@ -182,9 +161,9 @@ void particle2mesh(struct particle * pp,int p_id,double *meshpsi,double *meshphi
 	for(i=0;i<8;++i)
 	{
 		k = pp[p_id].cubeind[i];
-		tul00[k]+= m*gamma*del[i]*(1.0+3.0*rvphi-rvpsi-gamma*gamma*(vmgsqr*ap*ap*rvphi+rvpsi))/(ap*ap*ap);
-		tuldss[k]+= gamma*(vmgsqr/3.0)*del[i]*(1.0+3.0*rvphi-rvpsi-gamma*gamma*(vmgsqr*ap*ap*rvphi+rvpsi))/(ap*ap*ap);
-		psty[k]+= m*del[i]*(1.0+3.0*rvphi-gamma*gamma*vmgsqr*ap*ap*rvphi)/(ap*ap*ap);
+		tul00[k]+= m*del[i]*(1.0+3.0*rvphi-rvpsi-gamma*gamma*(vmgsqr*a*a*rvphi+rvpsi))/(ap*ap*ap);
+		tuldss[k]+= (vmgsqr/3.0)*del[i]*(1.0+3.0*rvphi-rvpsi-gamma*gamma*(vmgsqr*a*a*rvphi+rvpsi))/(ap*ap*ap);
+		psty[k]+= sqrt(vmgsqr)*m*del[i]*(1.0+3.0*rvphi-gamma*gamma*vmgsqr*a*a*rvphi)/(ap*ap*ap);
 		usty[k]+= m*del[i]*gamma*(-1.0-gamma*gamma)/(6.0*a_t*a_t*Mpl*Mpl*ap);
 
 		 
@@ -201,7 +180,7 @@ void particle2mesh(struct particle * pp,int p_id,double *meshpsi,double *meshphi
 
 void background()
 { 
-   //While this function uses t->tHi scaling, no other function does that
+   
    Vamp =1.0;
    int j;
    double Vvl,V_fvl,w,facb,omfb;
@@ -322,7 +301,6 @@ void initialise()
       omdmb= (cpmc)*pow((a0/ai),3.0)/(cpmc*a0*a0*a0/(ai*ai*ai) + (1.0-cpmc));
 
 	dx[0] = 0.001; dx[1] =0.001; dx[2] = 0.001;
-	//length of grid in different directions
         L[0] = dx[0]*((double) n);  L[1] = dx[1]*((double) n);  L[2] = dx[2]*((double) n);
       
 	for(ci = 0;ci <N; ++ci)
@@ -339,17 +317,8 @@ void initialise()
 			p[ci].v[j] = 0.0;
 		}
 		
-		tul00[ci] = 0.0;		
-		tuldss[ci] = 0.0;	
-
-		gridind[ci][0] = (int)(floor(ci/(n*n)));
-		gridind[ci][1] = (int)(floor(ci/n));
-		gridind[ci][2] = ci%n;		
-
-		grid[ci][0] = 0.0+((double)gridind[ci][0])*dx[0];
-		grid[ci][1] = 0.0+((double)gridind[ci][1])*dx[1];
-		grid[ci][2] = 0.0+((double)gridind[ci][2])*dx[2];
-	
+				
+				
       	}
 
 
@@ -358,7 +327,7 @@ void initialise()
 	  {
 	    particle2mesh(p,ci,psi,phi,a);
 
-	    usty[ci]+= 1.0-(a*a/(Mpl*Mpl*6.0*a_t*a_t))*f_a[ci]*f_a[ci];
+	    usty[ci]+= 1.0-(at*at/(Mpl*Mpl*6.0))*f_a[ci]*f_a[ci];
 
 	    Vvl = V(f[ci]);
 
@@ -366,16 +335,11 @@ void initialise()
 	    LAPpsi[ci] = 0.0;
 	    LAPphi[ci] = 0.0;	
 	    for(j=0;j<3;++j)
-	     {//for each coordinate calculate two nearest left and right neghbours for each grid point	 
-		
-		l1 = ci - (gridind[ci][j])*pow(n,2-j) +(n+gridind[ci][j]-1)%n*pow(n,2-j);
- 
-		l2 = ci - (gridind[ci][j])*pow(n,2-j) +(n+gridind[ci][j]-2)%n*pow(n,2-j);
-
-		r1 = ci - (gridind[ci][j])*pow(n,2-j) +(n+gridind[ci][j]+1)%n*pow(n,2-j);
- 
-		r2 = ci - (gridind[ci][j])*pow(n,2-j) +(n+gridind[ci][j]+2)%n*pow(n,2-j);
-		
+	     {	 
+		l1 = (N+ci-((int)(pow(n,2-j))))%N;
+		l2 = (N+ci-2*((int)(pow(n,2-j))))%N;
+		r1 = (N+ci+((int)(pow(n,2-j))))%N;
+		r2 = (N+ci+2*((int)(pow(n,2-j))))%N;
 
 		f_s[j][ci] = (f[l2]-8.0*f[l1]+8.0*f[r1]-f[r2])/(12.0*dx[j]);
 		
@@ -426,7 +390,8 @@ int evolve(double aini, double astp)
 	{ if(i%jprint==0)
 	   printf("a  %lf\n",a);
           
-          
+          Vvl = V(fb);
+  	  V_fvl = V_f(fb);
 	  a_t = sqrt((ommi*ai*ai*ai/a  + (1.0/(Mpl*Mpl))*a*a*Vvl/(3.0*c)) / ( 1.0 - (1.0/(Mpl*Mpl))*a*a*fb_a*fb_a/(6.0*c*c*c))) ;
           a_tt = -0.5*ommi*ai*ai*ai/(a*a) - (1.0/(Mpl*Mpl*c))*a*(fb_a*fb_a*a_t*a_t - Vvl)/3.0;
           facb = -V_fvl*c*c/(a_t*a_t) - 3.0*fb_a/a - a_tt*fb_a/(a_t*a_t);
