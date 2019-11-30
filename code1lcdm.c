@@ -4,7 +4,7 @@
 #include <stdlib.h> 
 #include <omp.h>
 
-#define  n 16
+#define  n 2
 
 double G   = 1.0;
 double c   = 1.0;
@@ -16,7 +16,7 @@ int N;
 
 double *psi, *phi, *f,*psi_a, *phi_a, *f_a,*tul00,*tuldss;
 double psi_s[3][n*n*n],phi_s[3][n*n*n],f_s[3][n*n*n],LAPphi[n*n*n],LAPpsi[n*n*n],LAPf[n*n*n],usty[n*n*n],psty[n*n*n];
-double *tmppsi, *tmpphi, *tmpf,*tmppsi_a, *tmpphi_a, *tmpf_a,m;
+double *tmppsi, *tmpphi, *tmpf,*tmppsi_a, *tmpphi_a, *tmpf_a,m=1.0;
 double dx[3];
 struct particle
 	{	
@@ -36,7 +36,7 @@ int gridind[n*n*n][3];
 
 int nic[n*n*n][16];
 
-double fb, fb_a, omdmb, omdeb, a, ak, a_t, a_tt, Vamp, ai, a0, da, ak, fbt, fb_at;
+double  omdmb, omdeb, a, ak, a_t, a_tt, Vamp, ai, a0, da, ak, fbt, fb_at,ommi,omdei;
 int jprint;
 double H0, Hi;
 
@@ -89,9 +89,10 @@ void main()
 	
 
       
-
+	
 	background();
 	initialise();
+	
 
        i = evolve(ai,a0);
       
@@ -159,14 +160,15 @@ void particle2mesh(struct particle * pp,int p_id,double *meshpsi,double *meshphi
 	}	
 	for(i=0;i<8;++i)
 	{
-		k = pp[p_id].cubeind[i];
-		tul00[k]+= m*del[i]*(1.0+3.0*rvphi-rvpsi-gamma*gamma*(vmgsqr*a*a*rvphi+rvpsi))/(ap*ap*ap);
-		tuldss[k]+= (vmgsqr/3.0)*del[i]*(1.0+3.0*rvphi-rvpsi-gamma*gamma*(vmgsqr*a*a*rvphi+rvpsi))/(ap*ap*ap);
-		psty[k]+= sqrt(vmgsqr)*m*del[i]*(1.0+3.0*rvphi-gamma*gamma*vmgsqr*a*a*rvphi)/(ap*ap*ap);
+		k = pp[p_id].cubeind[i];  printf("% d\n",k);
+		tul00[k]+= m*del[i]*(1.0+3.0*rvphi-rvpsi-gamma*gamma*(vmgsqr*ap*ap*rvphi+rvpsi))/(ap*ap*ap);
+		tuldss[k]+= (vmgsqr/3.0)*del[i]*(1.0+3.0*rvphi-rvpsi-gamma*gamma*(vmgsqr*ap*ap*rvphi+rvpsi))/(ap*ap*ap);
+		psty[k]+= sqrt(vmgsqr)*m*del[i]*(1.0+3.0*rvphi-gamma*gamma*vmgsqr*ap*ap*rvphi)/(ap*ap*ap);
 		usty[k]+= m*del[i]*gamma*(-1.0-gamma*gamma)/(6.0*a_t*a_t*Mpl*Mpl*ap);
 
 		 
-
+		
+			// printf("pacc  %lf   %lf   %d\n",(ap),tul00[k],p_id);
 	}
 
 	
@@ -178,7 +180,7 @@ void particle2mesh(struct particle * pp,int p_id,double *meshpsi,double *meshphi
 
 
 void background()
-{ 
+{ H0 =24.76*(1e-8);
    
    Vamp =1.0;
    int j;
@@ -188,16 +190,13 @@ void background()
    a0 = 1000.0;
    a_t = ai;
    double cpmc = (0.14/(0.68*0.68));
-   double ommi = (cpmc)*pow((a0/ai),3.0)/(cpmc*a0*a0*a0/(ai*ai*ai) + (1.0-cpmc));
-   double omdei = 1.0-ommi;
+    ommi = (cpmc)*pow((a0/ai),3.0)/(cpmc*a0*a0*a0/(ai*ai*ai) + (1.0-cpmc));
+    omdei = 1.0-ommi;
    
-   a_t =sqrt(ommi*ai*ai*ai/(a)  + (1.0-ommi)*a*a ) ; 
-       
-    a_tt =  -0.5*ommi*Hi*Hi*ai*ai*ai/(a*a) + (1.0-ommi)*Hi*Hi*a;
-    Hi = H0*a/a_t;
+  Hi = H0*sqrt(cpmc*a0*a0*a0/(ai*ai*ai) + (1.0-cpmc));
     
 
-    printf("WWWW  %.10lf  Hi %.10lf\n",a_t/a,Hi);
+    printf("WWWW  %.10lf  Hi %.10lf\n",a0/a_t,Hi);
     
 
   
@@ -218,12 +217,12 @@ void initialise()
       double gamma, v, gradmagf;
       a0 = 1000.0;
       ai = 1.0;
-      
+      a = ai;
       omdmb= (cpmc)*pow((a0/ai),3.0)/(cpmc*a0*a0*a0/(ai*ai*ai) + (1.0-cpmc));
 
 	dx[0] = 0.001; dx[1] =0.001; dx[2] = 0.001;
         L[0] = dx[0]*((double) n);  L[1] = dx[1]*((double) n);  L[2] = dx[2]*((double) n);
-      
+     
 	for(ci = 0;ci <N; ++ci)
 	{
 		
@@ -241,7 +240,7 @@ void initialise()
 		usty[ci]=0.0;
 		psty[ci]=0.0;				
       	}
-
+   
 
 	#pragma omp parallel for
 	  for(ci=0;ci<N;++ci)
@@ -249,10 +248,10 @@ void initialise()
 	    particle2mesh(p,ci,psi,phi,a);
 
 	    usty[ci]+= 1.0;
-
+	    
 	   
 
-	    LAPf[ci] = 0.0;
+	   
 	    LAPpsi[ci] = 0.0;
 	    LAPphi[ci] = 0.0;	
 	    for(j=0;j<3;++j)
@@ -270,7 +269,7 @@ void initialise()
 		LAPphi[ci] += (-phi[l2]+16.0*phi[l1]-30.0*phi[ci]+16.0*phi[r1]-phi[r2])/(12.0*dx[j]*dx[j]); 
 		LAPpsi[ci] += (-psi[l2]+16.0*psi[l1]-30.0*psi[ci]+16.0*psi[r1]-psi[r2])/(12.0*dx[j]*dx[j]); 
 
-		LAPf[ci] += (-f[l2]+16.0*f[l1]-30.0*f[ci]+16.0*f[r1]-f[r2])/(12.0*dx[j]*dx[j]); 
+		
 		
 	     }
   		
@@ -307,9 +306,9 @@ int evolve(double aini, double astp)
     int l2,l1,r1,r2;
     
 
-    for(a=aini,i=0;(a<=astp)&&(fail==1);++i)
-	{ if(i%jprint==0)
-	   printf("a  %lf\n",a);
+    for(a=aini,j=0;((a/ai)<=2.0)&&(fail==1);++j)
+    { //if(i%jprint==0)
+	   printf("a  %lf\n",a/ai);
           
           
 	  a_t = Hi*sqrt(ommi*ai*ai*ai/(a)  + (1.0-ommi)*a*a ) ; 
@@ -348,6 +347,10 @@ int evolve(double aini, double astp)
 			tmpp[ci].x[i] = p[ci].x[i] + 0.5*da*p[ci].v[i];
 			tmpp[ci].v[i] = p[ci].v[i] + 0.5*da*pacc[i]; 
 			anchor[i] =  ( n + (int) (tmpp[ci].x[i]/dx[i]))%n;
+
+			
+			
+
 	
 
 		}
@@ -369,11 +372,13 @@ int evolve(double aini, double astp)
 		tmpphi_a[ci] = phi_a[ci]+0.5*da*phiacc;
 		usty[ci] = 0.0 ;
 		psty[ci] = 0.0 ;
+
+		
 		
 	  }
 		
-	
-
+	  ak = a + 0.5*da;
+ 
 	    a_t = Hi*sqrt(ommi*ai*ai*ai/(ak)  + (1.0-ommi)*ak*ak ) ; 
        
         a_tt =  -0.5*ommi*Hi*Hi*ai*ai*ai/(ak*ak) + (1.0-ommi)*Hi*Hi*ak;
@@ -385,7 +390,7 @@ int evolve(double aini, double astp)
 
 	    usty[ci]+= 1.0;
 
-	  
+	    
 
 	    
 	    LAPpsi[ci] = 0.0;
@@ -414,6 +419,10 @@ int evolve(double aini, double astp)
 	  {
 		tmppsi[ci] = (1.0/usty[ci])*( LAPphi[ci]/(3.0*a_t*a_t) - 0.5*(1.0-ommi)*(ak*ak)*Hi*Hi/(a_t*a_t) - (ak*ak)*psty[ci]/(Mpl*Mpl*6.0*a_t*a_t) +0.5);
 		tmppsi_a[ci] = 2.0*(tmppsi[ci] - psi[ci])/da;
+
+
+		
+
 		
 		
                                       
@@ -482,9 +491,12 @@ int evolve(double aini, double astp)
 				 -psi_savg[i]/(ak))/(ak*ak) - a_tt*tmpp[ci].v[i]/(a_t*a_t);
 			p[ci].x[i] = p[ci].x[i] + 0.5*da*p[ci].v[i];
 			p[ci].v[i] = p[ci].v[i] + 0.5*da*pacc[i]; 
-			anchor[i] =  ( n + (int) (tmpp[ci].x[i]/dx[i]))%n;
-	
+			anchor[i] =  ( n + (int) (tmpp[ci].x[i]/dx[i]))%n; 
 
+
+			if(isnan(p[ci].x[i] +p[ci].v[i] ))
+				fail=0;
+		
 		}
 			p[ci].cubeind[0] = anchor[0]*n*n + anchor[1]*n + anchor[2];
 			p[ci].cubeind[1] = ((anchor[0]+1)%n)*n*n + anchor[1]*n + anchor[2];
@@ -504,7 +516,9 @@ int evolve(double aini, double astp)
 		
 		phi[ci]  = phi[ci]+da*tmpphi_a[ci];
 		phi_a[ci] = phi_a[ci]+da*phiacc;
-		
+
+ 		if(isnan(phi[ci]+phi_a[ci]))
+		fail=0;
 		usty[ci] = 0.0;
 		psty[ci] = 0.0;
 
@@ -581,12 +595,15 @@ int evolve(double aini, double astp)
    
    
 
-    printf("evolve w  %.10lf  Hi %.10lf  %.10lf  %.10lf\n",w,Hi,fb,a0);
-    printf("fail  %d\n",fail);
+ //   printf("evolve w  %.10lf  Hi %.10lf  %.10lf  %.10lf\n",a_t,a,a0);
 
+    if(fail!=1)
+    {printf("fail  %d\n",fail); 
 	return(fail);
- 	}
-
+    }    
+	
+   }
+ return(fail);
 }
 
 
