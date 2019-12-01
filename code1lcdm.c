@@ -160,7 +160,7 @@ void particle2mesh(struct particle * pp,int p_id,double *meshpsi,double *meshphi
 	}	
 	for(i=0;i<8;++i)
 	{
-		k = pp[p_id].cubeind[i];  printf("% d\n",k);
+		k = pp[p_id].cubeind[i];//  printf("% d\n",k);
 		tul00[k]+= m*del[i]*(1.0+3.0*rvphi-rvpsi-gamma*gamma*(vmgsqr*ap*ap*rvphi+rvpsi))/(ap*ap*ap);
 		tuldss[k]+= (vmgsqr/3.0)*del[i]*(1.0+3.0*rvphi-rvpsi-gamma*gamma*(vmgsqr*ap*ap*rvphi+rvpsi))/(ap*ap*ap);
 		psty[k]+= sqrt(vmgsqr)*m*del[i]*(1.0+3.0*rvphi-gamma*gamma*vmgsqr*ap*ap*rvphi)/(ap*ap*ap);
@@ -346,6 +346,12 @@ int evolve(double aini, double astp)
 				 -psi_savg[i]/(a))/(a*a) - a_tt*p[ci].v[i]/(a_t*a_t);
 			tmpp[ci].x[i] = p[ci].x[i] + 0.5*da*p[ci].v[i];
 			tmpp[ci].v[i] = p[ci].v[i] + 0.5*da*pacc[i]; 
+
+		if((tmpp[ci].x[i]>L[i])||(tmpp[ci].x[i]<0.0))
+			tmpp[ci].x[i] = fmod(tmpp[ci].x[i]+L[i],L[i]);
+		if((tmpp[ci].v[i]>L[i])||(tmpp[ci].v[i]<0.0))
+			tmpp[ci].v[i] = fmod(tmpp[ci].v[i]+L[i],L[i]);
+		
 			anchor[i] =  ( n + (int) (tmpp[ci].x[i]/dx[i]))%n;
 
 			
@@ -491,6 +497,13 @@ int evolve(double aini, double astp)
 				 -psi_savg[i]/(ak))/(ak*ak) - a_tt*tmpp[ci].v[i]/(a_t*a_t);
 			p[ci].x[i] = p[ci].x[i] + 0.5*da*p[ci].v[i];
 			p[ci].v[i] = p[ci].v[i] + 0.5*da*pacc[i]; 
+
+		if((p[ci].x[i]>L[i])||(p[ci].x[i]<0.0))
+			p[ci].x[i] = fmod(p[ci].x[i]+L[i],L[i]);
+		if((p[ci].v[i]>L[i])||(p[ci].v[i]<0.0))
+			p[ci].v[i] = fmod(p[ci].v[i]+L[i],L[i]);
+
+
 			anchor[i] =  ( n + (int) (tmpp[ci].x[i]/dx[i]))%n; 
 
 
