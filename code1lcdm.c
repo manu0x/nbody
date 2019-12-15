@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h> 
 #include <omp.h>
+#include <fenv.h>
 
 #define  n 2
 
@@ -60,7 +61,7 @@ void main()
         jprint = (int) (1.0/da);
 	N=n*n*n;
          
-
+	feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 	fpback  = fopen("back.txt","w");
 
         int i;
@@ -520,9 +521,8 @@ int evolve(double aini, double astp)
 			p[ci].cubeind[6] = anchor[0]*n*n + ((anchor[1]+1)%n)*n +   ((anchor[2]+1)%n);
 			p[ci].cubeind[7] = ((anchor[0]+1)%n)*n*n + ((anchor[1]+1)%n)*n + ((anchor[2]+1)%n);
 /////////////////////phi  acceleration calculation Final/////////////////////////////////////////////////////////////////////////////////
-
-		phiacc = (1.0/(a_t*ak*a_t*ak))*
-				(-2.0*tmppsi[ci]*a_t*a_t - 4.0*ak*tmppsi[ci]*a_tt + (2.0/3.0)*(LAPphi[ci]-LAPpsi[ci])
+		printf("a_t  %lf \n", (2.0/3.0)*(phi[ci]-psi[ci]));
+		phiacc = (1.0/(a_t*ak*a_t*ak))*(-2.0*tmppsi[ci]*a_t*a_t - 4.0*ak*tmppsi[ci]*a_tt + (2.0/3.0)*(LAPphi[ci]-LAPpsi[ci])
 				-ak*ak*tuldss[ci]/(3.0*Mpl*Mpl))/(a_t*a_t) - 3.0*tmpphi_a[ci]/ak -tmppsi_a[ci]/a - a_tt*tmpphi_a[ci]/(a_t*a_t);
 
 		
