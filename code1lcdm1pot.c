@@ -9,6 +9,9 @@
 
 #define  n 32
 
+FILE *fppwspctrm;
+
+
 double G   = 1.0;
 double c   = 1.0;
 double Mpl ;
@@ -21,6 +24,7 @@ double *phi, *phi, *f,*phi_a, *phi_a, *f_a,*tul00,*tuldss;
 double phi_s[3][n*n*n],phi_s[3][n*n*n],f_s[3][n*n*n],LAPphi[n*n*n],LAPphi[n*n*n],LAPf[n*n*n],usty[n*n*n],psty[n*n*n];
 double *tmpphi, *tmpphi, *tmpf,*tmpphi_a, *tmpphi_a, *tmpf_a, *ini_vel0,*ini_vel1,*ini_vel2,m=1.0;
 double dx[3];
+double density_contrast[n*n*n];
 struct particle
 	{	
 		double x[3];
@@ -35,6 +39,8 @@ struct particle
 
 struct particle p[n*n*n],tmpp[n*n*n];
 double grid[n*n*n][3];
+int kmagrid[n*n*n],kbins,kbincnt[n*n*n];
+double dk; double pwspctrm[n*n*n];
 
 
  
@@ -79,6 +85,7 @@ void background();
 void initialise();
 double ini_power_spec(double);
 void ini_rand_field();
+void ini_displace_particle(double);
 double mesh2particle(struct particle *,int,double *);
 void particle2mesh(struct particle * ,int ,double *,double );
 int evolve(double ,double );
@@ -95,6 +102,7 @@ void main()
 	
 
 	fpback  = fopen("back.txt","w");
+	fppwspctrm  = fopen("pwspctrm.txt","w");
 
         int i;
 
@@ -192,14 +200,37 @@ void cal_spectrum(double *spcmesh)
 	dens_cntrst = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
 	Fdens_cntrst = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
 
-	for(i=0;i<tn;++i)
+	for(i=0;i<tN;++i)
 	{
-		dens_cntrs[i][0] = spcmesh[i];
-		dens_cntrs[i][1] = 0.0;
+		dens_cntrst[i][0] = spcmesh[i];
+		dens_cntrst[i][1] = 0.0;
+
+		pwspctrm[i] = 0.0;
 	}
 
 
-	spec_plan = fftw_plan_dft_3d(n,n,n, dens_cntrs, Fdens_cntrst, FFTW_FORWARD, FFTW_ESTIMATE);
+	spec_plan = fftw_plan_dft_3d(n,n,n, dens_cntrst, Fdens_cntrst, FFTW_FORWARD, FFTW_ESTIMATE);
+
+	fftw_free(dens_cntrst);
+
+
+	for(i=0;i<tN;++i)
+	{
+		
+		pwspctrm[kmagrid[i]]+=  (dens_cntrst[i][1]*dens_cntrst[i][1] + dens_cntrst[i][1]*dens_cntrst[i][1]);
+
+	}
+
+	for(i=0;i<=kbins;++i)
+	{
+
+		if(kbincnt[i]!=0)
+		fprintf(fppwspctrm,"%lf\t%lf\n",i*dk,pwspctrm[i]/kbincnt[i]);
+
+
+
+	}
+	
 
 
 }
@@ -214,6 +245,42 @@ double ini_power_spec(double kamp)
 
 
 }
+
+
+
+void cal_dc_fr_particles()
+{
+
+	int i,j,k,p_id;
+	int anchor[3];
+	double rvphi=0.0,del[8];
+  for(j=0;j<tN;+j)
+  {
+    density_contrast[j]=0.0;
+
+  }
+
+
+  for(p_id=0;p_id<8;++p_id)
+    {	for(i=0;i<8;++i)
+	{
+		k = p[p_id].cubeind[i];
+		del[i] = 1.0;
+		for(j=0;j<3;++j)
+		{del[i]*=  (fabs(p[p_id].x[j]-grid[k][j])/dx[j])*(fabs(p[p_id].x[j]-grid[k][j])/dx[j]);
+         	 
+		}
+			
+		
+		density_contrast[k]+= del[i];
+		
+	}	
+	
+   }
+
+
+}
+
 
 void ini_rand_field()
 {	init_genrand(time(0));
@@ -385,8 +452,8 @@ void ini_rand_field()
 
 
 
-void ini_displace_particle()
-{	double iniv0,iniv1,iniv2,ds=0.001;
+void ini_displace_particle(double thres)
+{	double iniv0,iniv1,iniv2,ds=0.001,maxv;
 	int i,ci;
 
 	 for(ci=0;ci<tN;++ci)
@@ -402,7 +469,25 @@ void ini_displace_particle()
 		p[ci].v[0]  = iniv0/a_t;
 		p[ci].v[1]  = iniv1/a_t;
 		p[ci].v[2]  = iniv2/a_t;
+
+		if(fabs(p[ci].v[0])>maxv)
+		maxv = p[ci].v[0];
+		if(fabs(p[ci].v[1])>maxv)
+		maxv = p[ci].v[1];
+		if(fabs(p[ci].v[2])>maxv)
+		maxv = p[ci].v[2];
+
 		
+		
+		
+	 }
+
+	ds = thres*dx[0]/maxv;
+	
+
+	for(ci=0;ci<tN;++ci)
+	  {
+			
 		for(i=0;i<3;++i)
 		{	p[ci].x[i] = p[ci].x[i] + ds*p[ci].v[i];
 			if((p[ci].x[i]>L[i])||(p[ci].x[i]<0.0))
@@ -503,10 +588,15 @@ void initialise()
 
 	dx[0] = 0.001; dx[1] =0.001; dx[2] = 0.001;
         L[0] = dx[0]*((double) (n-1));  L[1] = dx[1]*((double) (n-1));  L[2] = dx[2]*((double) (n-1));
-
+	dk = 0.1/dx[0]; kbins = 0;
 
 	ini_rand_field();
         
+	for(ci = 0;ci <tN; ++ci)
+	{
+		kbincnt[ci]=0;
+	}
+	
 	for(ci = 0;ci <tN; ++ci)
 	{
 		
@@ -516,18 +606,31 @@ void initialise()
 		if((ci%(n))==0)
 		 ++xcntr[1];
 		 ++xcntr[2];
-
+		kmagrid[ci]=0.0;
 		for(j=0;j<3;++j)
 		{	p[ci].x[j] =  ((double) rand()/((double) RAND_MAX  ))*L[j];
 			
 
 			grid[ci][j] = (xcntr[j]%n)*dx[j];
+
+			if((xcntr[j]<n/2))
+				kmagrid[ci]+= (xcntr[j]*xcntr[j]);
+			else
+				kmagrid[ci]+= ((n/2-xcntr[j])*(n/2-xcntr[j]));
+
+			 
 			
 		
 			//printf("grid ini  %d  %d  %d %lf\n",ci,j,(xcntr[j]%n),grid[ci][j]);
 		}
 		
-				
+		kmagrid[ci] = (int)(sqrt((double)kmagrid[ci])/(L[0]*dk));
+		 printf("yo  %d\n",kmagrid[ci]);
+		++kbincnt[kmagrid[ci]];
+
+		if(kmagrid[ci]>kbins)
+		kbins=kmagrid[ci];
+		
 		usty[ci]=0.0;
 		psty[ci]=0.0;		
 
@@ -535,8 +638,8 @@ void initialise()
 		 phi_a[ci] = 0.0;
 		
       	}
-   
-	ini_displace_particle();
+  
+	ini_displace_particle(0.5);
 	#pragma omp parallel for
 	  for(ci=0;ci<tN;++ci)
 	  {
@@ -575,7 +678,7 @@ void initialise()
           
 	free(ini_vel0); free(ini_vel1); free(ini_vel2);
 	printf("Initialization Complete.");
-
+	
 
 	  
 
