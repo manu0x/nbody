@@ -90,6 +90,8 @@ void ini_displace_particle(double);
 double mesh2particle(struct particle *,int,double *);
 void particle2mesh(struct particle * ,int ,double *,double );
 int evolve(double ,double );
+void cal_spectrum(double *);
+void cal_dc_fr_particles();
 
 void main()
 {       Mpl = 1.0/sqrt(8.0*3.142*G) ;
@@ -150,8 +152,9 @@ void main()
 	initialise();
 	
 
-      // i = evolve(ai,100.0);
-      
+       i = evolve(ai,10.0);
+       cal_dc_fr_particles();
+       cal_spectrum(density_contrast);
 
 
 
@@ -175,7 +178,7 @@ void cal_spectrum(double *spcmesh)
 
 	for(i=0;i<tN;++i)
 	{
-		dens_cntrst[i][0] = spcmesh[i];
+		dens_cntrst[i][0] = spcmesh[i]; 
 		dens_cntrst[i][1] = 0.0;
 
 		pwspctrm[i] = 0.0;
@@ -183,22 +186,22 @@ void cal_spectrum(double *spcmesh)
 
 
 	spec_plan = fftw_plan_dft_3d(n,n,n, dens_cntrst, Fdens_cntrst, FFTW_FORWARD, FFTW_ESTIMATE);
-
+	fftw_execute(spec_plan);
 	fftw_free(dens_cntrst);
 
 
 	for(i=0;i<tN;++i)
 	{
 		
-		pwspctrm[kmagrid[i]]+=  (dens_cntrst[i][1]*dens_cntrst[i][1] + dens_cntrst[i][1]*dens_cntrst[i][1]);
+		pwspctrm[kmagrid[i]]+=  (Fdens_cntrst[i][1]*Fdens_cntrst[i][1] + Fdens_cntrst[i][0]*Fdens_cntrst[i][0]);
 
 	}
-
+	fprintf(fppwspctrm,"\n\n\n\n");
 	for(i=0;i<=kbins;++i)
 	{
 
 		if(kbincnt[i]!=0)
-		fprintf(fppwspctrm,"%lf\t%lf\n",i*dk,pwspctrm[i]);
+		fprintf(fppwspctrm,"%lf\t%lf\n",i*dk,pwspctrm[i]/(kbincnt[i]*i*dk*i*dk));
 
 
 
@@ -214,7 +217,7 @@ double ini_power_spec(double kamp)
 {
 
 
-	return(1.011);
+	return(0.0011);
 
 
 }
@@ -259,11 +262,11 @@ void cal_dc_fr_particles()
 	}	
 	
    }
-
+	fprintf(fptest,"\n\n\n\n");
    for(i=0;i<tN;++i)
 	{
 		//printf("dc %lf\n",density_contrast[i]);
-		density_contrast[i]=density_contrast[i]-1.0 ;
+		density_contrast[i]=(density_contrast[i]*(n-1.0)*(n-1.0)*(n-1.0)/(n*n*n)-1.0) ;
 		fprintf(fptest,"%d\t%.20lf\t%.20lf\n",i,p[i].v[0],density_contrast[i]);
 
 	}
@@ -806,7 +809,7 @@ void initialise()
 	cal_spectrum(density_contrast);
 	
 
-	printf("Initialization Complete.");
+	printf("Initialization Complete.\n");
 	
 
 	  
