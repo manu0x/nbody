@@ -97,8 +97,8 @@ void clear_Tmunu();
 
 void main()
 {       Mpl = 1.0/sqrt(8.0*3.142*G) ;
-        da = 0.01;
-        jprint = (int) (1.0/da);
+        da = 0.00001;
+        jprint = (int) (0.001/da);
 	printf("jprint %d\n",jprint);
 	tN=n*n*n;
          
@@ -154,9 +154,9 @@ void main()
 	initialise();
 	
 
-       i = evolve(ai,10.0);
-       cal_dc_fr_particles();
-       cal_spectrum(density_contrast);
+   //    i = evolve(ai,10.0);
+     //  cal_dc_fr_particles();
+      // cal_spectrum(density_contrast);
 
 
 
@@ -203,7 +203,7 @@ void cal_spectrum(double *spcmesh)
 	{
 
 		if(kbincnt[i]!=0)
-		fprintf(fppwspctrm,"%lf\t%lf\n",i*dk,pwspctrm[i]/(kbincnt[i]*i*dk*i*dk));
+		fprintf(fppwspctrm,"%lf\t%lf\n",i*dk,pwspctrm[i]/(kbincnt[i]));
 
 
 
@@ -302,35 +302,35 @@ void ini_rand_field()
 			{   cnt = i*n*n + j*n + k;
 				if(maxcnt<cnt)
 			    	 maxcnt = cnt;
-			   ksqr = 2.0*M_PI*2.0*M_PI*
-				(((double) ief)*((double) ief)/(dx[0]*dx[0]) 
-				+ ((double) jef)*((double) jef)/(dx[1]*dx[1])+ ((double) k)*((double) k)/(dx[2]*dx[2]) ) 
+			   	ksqr = 2.0*M_PI*2.0*M_PI*
+					(((double) ief)*((double) ief)/(dx[0]*dx[0]) 
+					+ ((double) jef)*((double) jef)/(dx[1]*dx[1])+ ((double) k)*((double) k)/(dx[2]*dx[2]) ) 
 					/(((double) n)*((double) n));
-			  sigk  = ini_power_spec(sqrt(ksqr));
-			  muk = sigk/sqrt(2.0);
-		 	a1 = genrand_res53();
- 			a2 = genrand_res53(); 
-			b1 = genrand_res53();
- 			b2 = genrand_res53();
-			a = (muk*(sqrt(-2.0*log(a1))*cos(2.0*M_PI*a2)));
-			b = (muk*(sqrt(-2.0*log(b1))*cos(2.0*M_PI*b2)));
+			    sigk  = ini_power_spec(sqrt(ksqr));
+			    muk = sigk/sqrt(2.0);
+		 	    a1 = genrand_res53();
+ 			    a2 = genrand_res53(); 
+			    b1 = genrand_res53();
+ 			    b2 = genrand_res53();
+			    a = (muk*(sqrt(-2.0*log(a1))*cos(2.0*M_PI*a2)));
+			    b = (muk*(sqrt(-2.0*log(b1))*cos(2.0*M_PI*b2)));
 				
-			F_ini_del[cnt][0] = a;	F_ini_del[cnt][1] = b;
+			    F_ini_del[cnt][0] = a;	F_ini_del[cnt][1] = b;
 
 
-			if(ksqr!=0.0)
-			{F_ini_phi[cnt][0] = -1.5*omdmb*Hi*Hi*ai*ai*F_ini_del[cnt][0]/ksqr;	
-			 F_ini_phi[cnt][1] = -1.5*omdmb*Hi*Hi*ai*ai*F_ini_del[cnt][1]/ksqr;
-			}
-			else
-			{F_ini_phi[cnt][0] = 0.0;	
-			 F_ini_phi[cnt][1] = 0.0;
-			}
+			    if(ksqr!=0.0)
+			    {F_ini_phi[cnt][0] = -1.5*omdmb*Hi*Hi*ai*ai*F_ini_del[cnt][0]/ksqr;	
+			     F_ini_phi[cnt][1] = -1.5*omdmb*Hi*Hi*ai*ai*F_ini_del[cnt][1]/ksqr;
+			    }
+			  else
+			    {F_ini_phi[cnt][0] = 0.0;	
+			     F_ini_phi[cnt][1] = 0.0;
+		 	    } 
 		
 			
 
-			F_ini_v2[cnt][0] =  -k*F_ini_phi[cnt][1]/(dx[2]*n);
-			F_ini_v2[cnt][1] =  k*F_ini_phi[cnt][0]/(dx[2]*n);
+			   F_ini_v2[cnt][0] =  -k*F_ini_phi[cnt][1]/(dx[2]*n);
+		 	   F_ini_v2[cnt][1] =  k*F_ini_phi[cnt][0]/(dx[2]*n);
 
 
   		 	// if(k!=0)
@@ -364,10 +364,10 @@ void ini_rand_field()
 	{
 		for(k=0;k<(n);++k)
 		{
-			for(j=0;j<(n/2);++j)
+			for(j=0;j<=(n/2);++j)
 			{  
 				cnt = i*n*n + j*n + k;
-				rk = (n-j)-1;
+				rk = (n-j);
 				rcnt = i*n*n + rk*n + k;
 
 				F_ini_v1[cnt][0] =  -j*F_ini_phi[cnt][1]/(dx[1]*n);
@@ -387,10 +387,10 @@ void ini_rand_field()
 	{
 		for(k=0;k<(n);++k)
 		{
-			for(i=0;i<(n/2);++i)
+			for(i=0;i<=(n/2);++i)
 			{  
 				cnt = i*n*n + j*n + k;
-				rk = (n-i)-1;
+				rk = (n-i);
 				rcnt = rk*n*n + j*n + k;
 
 				F_ini_v0[cnt][0] =  -i*F_ini_phi[cnt][1]/(dx[0]*n);
@@ -668,6 +668,8 @@ void initialise()
       a = ai;
       omdmb= (cpmc)*pow((a0/ai),3.0)/(cpmc*a0*a0*a0/(ai*ai*ai) + (1.0-cpmc));
 
+     a_t=Hi*ai;
+
 	dx[0] = 0.001; dx[1] =0.001; dx[2] = 0.001;
         L[0] = dx[0]*((double) (n-1));  L[1] = dx[1]*((double) (n-1));  L[2] = dx[2]*((double) (n-1));
 	dk = 0.1/dx[0]; kbins = 0;
@@ -695,7 +697,7 @@ void initialise()
 			anchor[j] =   (int) (p[ci].x[j]/dx[j]); 
 			grid[ci][j] = (xcntr[j]%n)*dx[j];
 
-			if((xcntr[j]<n/2))
+			if((xcntr[j]<=n/2))
 				kmagrid[ci]+= ((xcntr[j]%n)*(xcntr[j]%n));
 			else
 				kmagrid[ci]+= ((n/2-(xcntr[j]%n))*(n/2-(xcntr[j]%n)));
