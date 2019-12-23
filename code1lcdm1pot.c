@@ -70,7 +70,8 @@ int gridind[n*n*n][3];
 
 int nic[n*n*n][16];
 
-double  omdmb, omdeb, a, ak, a_t, a_tt, Vamp, ai, a0, da, ak, fbt, fb_at,ommi,omdei;
+double  omdmb, omdeb, a, ak, a_t, a_tt, Vamp, ai, a0, da;
+double cpmc = (0.14/(0.68*0.68));
 int jprint;
 double H0, Hi;
 
@@ -92,6 +93,7 @@ void particle2mesh(struct particle * ,int ,double *,double );
 int evolve(double ,double );
 void cal_spectrum(double *);
 void cal_dc_fr_particles();
+void clear_Tmunu();
 
 void main()
 {       Mpl = 1.0/sqrt(8.0*3.142*G) ;
@@ -285,18 +287,18 @@ void ini_rand_field()
 	init_genrand(time(0));
 	
 	for(i=0;i<n;++i)
-	{	if(i<(n/2))
+	{	if(i<=(n/2))
 		ief = i;
 		else
-		ief = i-n+1;
+		ief = i-n;
 
 		for(j=0;j<(n);++j)
 		{
-			if(i<(n/2))
+			if(i<=(n/2))
 			jef = j;
 			else
-			jef = j-n+1;
-			for(k=0;k<(n/2);++k)
+			jef = j-n;
+			for(k=0;k<=(n/2);++k)
 			{   cnt = i*n*n + j*n + k;
 				if(maxcnt<cnt)
 			    	 maxcnt = cnt;
@@ -334,7 +336,7 @@ void ini_rand_field()
   		 	// if(k!=0)
 			  {
 
-			  	rk = (n-k)-1;
+			  	rk = (n-k);
 				rcnt = i*n*n + j*n + rk; 
 				if(maxcnt<rcnt)
 			    	 maxcnt = rcnt;
@@ -626,18 +628,17 @@ void particle2mesh(struct particle * pp,int p_id,double *meshphi,double ap)
 
 
 void background()
-{ H0 =24.76*(1e-8);
+{ H0 =24.76*(1e-5);
    
    Vamp =1.0;
    int j;
    
    int fail=1;
-   ai = 1.0;
-   a0 = 1000.0;
+   ai = 0.001;
+   a0 = 1.0;
    a_t = ai;
-   double cpmc = (0.14/(0.68*0.68));
-    ommi = (cpmc)*pow((a0/ai),3.0)/(cpmc*a0*a0*a0/(ai*ai*ai) + (1.0-cpmc));
-    omdei = 1.0-ommi;
+   
+    
    
   Hi = H0*sqrt(cpmc*a0*a0*a0/(ai*ai*ai) + (1.0-cpmc));
     
@@ -658,12 +659,12 @@ void initialise()
 {
       int l1,l2,r1,r2;
 
-      double cpmc = (0.14/(0.68*0.68));
+    
       int px,py,pz,ci,pgi,j;
       int xcntr[3]={-1,-1,-1},anchor[3];
       double gamma, v, gradmagf;
-      a0 = 1000.0;
-      ai = 1.0;
+      a0 = 1.00;
+      ai = 0.001;
       a = ai;
       omdmb= (cpmc)*pow((a0/ai),3.0)/(cpmc*a0*a0*a0/(ai*ai*ai) + (1.0-cpmc));
 
@@ -691,13 +692,13 @@ void initialise()
 		for(j=0;j<3;++j)
 		{	p[ci].x[j] =  ((double) rand()/((double) RAND_MAX  ))*L[j];
 			
-			anchor[j] =  ( n + (int) (p[ci].x[j]/dx[j]))%n; 
+			anchor[j] =   (int) (p[ci].x[j]/dx[j]); 
 			grid[ci][j] = (xcntr[j]%n)*dx[j];
 
 			if((xcntr[j]<n/2))
-				kmagrid[ci]+= (xcntr[j]*xcntr[j]);
+				kmagrid[ci]+= ((xcntr[j]%n)*(xcntr[j]%n));
 			else
-				kmagrid[ci]+= ((n/2-xcntr[j])*(n/2-xcntr[j]));
+				kmagrid[ci]+= ((n/2-(xcntr[j]%n))*(n/2-(xcntr[j]%n)));
 
 			 
 			
@@ -754,7 +755,8 @@ void initialise()
 		
 		
 
-
+		tul00[ci]= 0.0;
+		tuldss[ci]=0.0;
 			
 			p[ci].cubeind[0] = anchor[0]*n*n + anchor[1]*n + anchor[2];
 			p[ci].cubeind[1] = ((anchor[0]+1)%n)*n*n + anchor[1]*n + anchor[2];
@@ -880,7 +882,7 @@ int evolve(double aini, double astp)
 			tmpp[ci].x[i] = fmod(tmpp[ci].x[i]+L[i],L[i]);
 		
 		
-			anchor[i] =  ( n + (int) (tmpp[ci].x[i]/dx[i]))%n;
+			anchor[i] =   (int) (tmpp[ci].x[i]/dx[i]);
 
 			
 			
@@ -989,15 +991,15 @@ int evolve(double aini, double astp)
 			pacc[i] = (tmpp[ci].v[i]*a_t*a_t*a_t*vmagsqr*(-2.0*ak*a_t*(phiavg+phiavg)-ak*ak*phi_aavg*a_t+a*a_t)
 				 +tmpp[ci].v[i]*a_t*(fsg + phi_aavg*a_t -2.0*a_t/ak + 2.0*phi_aavg*a_t -phi_savg[i])
 				 -phi_savg[i]/(ak))/(ak*ak) - a_tt*tmpp[ci].v[i]/(a_t*a_t);
-			p[ci].x[i] = p[ci].x[i] + 0.5*da*p[ci].v[i];
-			p[ci].v[i] = p[ci].v[i] + 0.5*da*pacc[i]; 
+			p[ci].x[i] = p[ci].x[i] + da*p[ci].v[i];
+			p[ci].v[i] = p[ci].v[i] + da*pacc[i]; 
 
 		if((p[ci].x[i]>L[i])||(p[ci].x[i]<0.0))
 			p[ci].x[i] = fmod(p[ci].x[i]+L[i],L[i]);
 		
 
 
-			anchor[i] =  ( n + (int) (tmpp[ci].x[i]/dx[i]))%n; 
+			anchor[i] =  (int) (tmpp[ci].x[i]/dx[i]); 
 
 
 			if(isnan(p[ci].x[i] +p[ci].v[i] ))

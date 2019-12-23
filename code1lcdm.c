@@ -88,7 +88,7 @@ double ini_power_spec(double);
 void ini_rand_field();
 void ini_displace_particle(double);
 double mesh2particle(struct particle *,int,double *);
-void particle2mesh(struct particle * ,int ,double *,double );
+void particle2mesh(struct particle * ,int ,double *,double *,double );
 int evolve(double ,double );
 void cal_spectrum(double *);
 void cal_dc_fr_particles();
@@ -572,12 +572,12 @@ double mesh2particle(struct particle *pp,int p_id,double *meshf)
 
 
 
-void particle2mesh(struct particle * pp,int p_id,double *meshphi,double ap)
+void particle2mesh(struct particle * pp,int p_id,double *meshpsi,double *meshphi,double ap)
 {
 
 	int i,j,k;
 	int anchor[3];
-	double rvphi=0.0,del[8],deld;
+	double rvphi=0.0,rvpsi=0.0,del[8],deld;
 	double gamma,vmgsqr;
 	
 	vmgsqr=a_t*a_t*(pp[p_id].v[0]*pp[p_id].v[0]+pp[p_id].v[1]*pp[p_id].v[1]+pp[p_id].v[2]*pp[p_id].v[2]);
@@ -602,13 +602,14 @@ void particle2mesh(struct particle * pp,int p_id,double *meshphi,double ap)
 			
 		
 		rvphi+= del[i]*meshphi[k];
+		rvpsi+= del[i]*meshpsi[k];
 		
 	}	
 	for(i=0;i<8;++i)
 	{
 		k = pp[p_id].cubeind[i];//  printf("% d\n",k);
-		tul00[k]+= m*del[i]*(1.0+3.0*rvphi-rvphi-gamma*gamma*(vmgsqr*ap*ap*rvphi+rvphi))/(ap*ap*ap);
-		tuldss[k]+= (vmgsqr*gamma/3.0)*del[i]*(3.0*rvphi-rvphi-gamma*gamma*(vmgsqr*ap*ap*rvphi+rvphi))/(ap*ap*ap);
+		tul00[k]+= m*del[i]*(1.0+3.0*rvphi-rvpsi-gamma*gamma*(vmgsqr*ap*ap*rvphi+rvpsi))/(ap*ap*ap);
+		tuldss[k]+= (vmgsqr*gamma/3.0)*del[i]*(3.0*rvphi-rvpsi-gamma*gamma*(vmgsqr*ap*ap*rvphi+rvpsi))/(ap*ap*ap);
 		psty[k]+= sqrt(vmgsqr)*m*del[i]*(1.0+3.0*rvphi-gamma*gamma*vmgsqr*ap*ap*rvphi)/(ap*ap*ap);
 		usty[k]+= m*del[i]*gamma*(-1.0-gamma*gamma)/(6.0*a_t*a_t*Mpl*Mpl*ap);
 
@@ -773,7 +774,7 @@ void initialise()
 	#pragma omp parallel for
 	  for(ci=0;ci<tN;++ci)
 	  {
-	    particle2mesh(p,ci,phi,a);
+	    particle2mesh(p,ci,psi,phi,a);
 
 	    usty[ci]+= 1.0;
 	    
@@ -926,7 +927,7 @@ int evolve(double aini, double astp)
 	  #pragma omp parallel for
 	  for(ci=0;ci<tN;++ci)
 	  {
-	    particle2mesh(tmpp,ci,tmpphi,ak);
+	    particle2mesh(tmpp,ci,tmppsi,tmpphi,ak);
 
 	    usty[ci]+= 1.0;
 
@@ -1086,7 +1087,7 @@ int evolve(double aini, double astp)
 	  #pragma omp parallel for
 	  for(ci=0;ci<tN;++ci)
 	  {
-	    particle2mesh(p,ci,phi,a);
+	    particle2mesh(p,ci,psi,phi,a);
 
 	    usty[ci]+= 1.0;
 
