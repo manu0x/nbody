@@ -24,7 +24,7 @@ double *phi, *phi, *f,*phi_a, *phi_a, *f_a,*tul00,*tuldss;
 double phi_s[3][n*n*n],phi_s[3][n*n*n],f_s[3][n*n*n],LAPphi[n*n*n],LAPphi[n*n*n],LAPf[n*n*n],usty[n*n*n],psty[n*n*n];
 double *tmpphi, *tmpphi, *tmpf,*tmpphi_a, *tmpphi_a, *tmpf_a, *ini_vel0,*ini_vel1,*ini_vel2,m=1.0;
 double dx[3];
-double density_contrast[n*n*n];
+double density_contrast[n*n*n],ini_density_contrast[n*n*n];
 struct particle
 	{	
 		double x[3];
@@ -210,6 +210,7 @@ void cal_spectrum(double *spcmesh)
 	}
 	
 	fftw_free(Fdens_cntrst);
+	fftw_destroy_plan(spec_plan);
 
 }
 
@@ -269,7 +270,7 @@ void cal_dc_fr_particles()
 	{
 		//printf("dc %lf\n",density_contrast[i]);
 		density_contrast[i]=(density_contrast[i]*(n-1.0)*(n-1.0)*(n-1.0)/(n*n*n)-1.0) ;
-		fprintf(fptest,"%d\t%.20lf\t%.20lf\n",i,p[i].v[0],density_contrast[i]);
+		fprintf(fptest,"%d\t%.20lf\t%.20lf\n",i,ini_density_contrast[i],density_contrast[i]);
 
 	}
 
@@ -373,7 +374,7 @@ void ini_rand_field()
 				F_ini_v1[cnt][0] =  -j*F_ini_phi[cnt][1]/(dx[1]*n);
 				F_ini_v1[cnt][1] =  j*F_ini_phi[cnt][0]/(dx[1]*n);
 
-				F_ini_v1[rcnt][0] = F_ini_v2[rcnt][0];	F_ini_v2[rcnt][1] = -F_ini_v2[cnt][1];
+				F_ini_v1[rcnt][0] = F_ini_v1[rcnt][0];	F_ini_v1[rcnt][1] = -F_ini_v1[cnt][1];
 			}
 
 		
@@ -423,11 +424,13 @@ void ini_rand_field()
 	for(cnt=0;cnt<tN;++cnt)
 	{
 
-		ini_del[cnt][0] = ini_del[cnt][0]/n; ini_del[cnt][1] = ini_del[cnt][1]/n; 
-		ini_phi[cnt][0] = ini_phi[cnt][0]/n; ini_phi[cnt][1] = ini_phi[cnt][1]/n;
-		ini_v0[cnt][0] = ini_v0[cnt][0]/n;   ini_v0[cnt][1] = ini_v0[cnt][1]/n;
-		ini_v1[cnt][0] = ini_v1[cnt][0]/n;   ini_v1[cnt][1] = ini_v1[cnt][1]/n;
-		ini_v2[cnt][0] = ini_v2[cnt][0]/n;   ini_v2[cnt][1] = ini_v2[cnt][1]/n;
+		ini_del[cnt][0] = ini_del[cnt][0]/(n*n*n); ini_del[cnt][1] = ini_del[cnt][1]/(n*n*n); 
+		ini_phi[cnt][0] = ini_phi[cnt][0]/(n*n*n); ini_phi[cnt][1] = ini_phi[cnt][1]/(n*n*n);
+		ini_v0[cnt][0] = ini_v0[cnt][0]/(n*n*n);   ini_v0[cnt][1] = ini_v0[cnt][1]/(n*n*n);
+		ini_v1[cnt][0] = ini_v1[cnt][0]/(n*n*n);   ini_v1[cnt][1] = ini_v1[cnt][1]/(n*n*n);
+		ini_v2[cnt][0] = ini_v2[cnt][0]/(n*n*n);   ini_v2[cnt][1] = ini_v2[cnt][1]/(n*n*n);
+
+		ini_density_contrast[cnt] = ini_del[cnt][0];
 
 		ini_vel0[cnt] = ini_v0[cnt][0];
 		ini_vel1[cnt] = ini_v1[cnt][0];
@@ -467,7 +470,7 @@ void ini_displace_particle(double thres)
 		mind=L[0];	
 		
 	   
-	   for(i=0;i<8;++i)
+	 /*  for(i=0;i<8;++i)
 	   {    dist=0.0;
 		k = p[ci].cubeind[i];
 		
@@ -485,12 +488,13 @@ void ini_displace_particle(double thres)
 
 
 	  }
-	
+	*/
 			
                 
 		//if(isnan(iniv0 +iniv1+iniv2))
 		//printf("aloh  %lf\t%lf\t%lf\n",ini_vel0[ci],ini_vel1[ci],ini_vel2[ci]);
 
+		ngp = ci;
 
 		p[ci].v[0]  = ini_vel0[ngp]/a_t;
 		p[ci].v[1]  = ini_vel1[ngp]/a_t;
@@ -663,6 +667,7 @@ void initialise()
       int px,py,pz,ci,pgi,j;
       int xcntr[3]={-1,-1,-1},anchor[3];
       double gamma, v, gradmagf;
+      double ktmp,maxkmagsqr = 0.0;
       a0 = 1.00;
       ai = 0.001;
       a = ai;
@@ -672,7 +677,7 @@ void initialise()
 
 	dx[0] = 0.001; dx[1] =0.001; dx[2] = 0.001;
         L[0] = dx[0]*((double) (n-1));  L[1] = dx[1]*((double) (n-1));  L[2] = dx[2]*((double) (n-1));
-	dk = 0.1/dx[0]; kbins = 0;
+	dk = 0.0001/dx[0]; kbins = 0;
 
 	ini_rand_field();
         
@@ -690,17 +695,19 @@ void initialise()
 		if((ci%(n))==0)
 		 ++xcntr[1];
 		 ++xcntr[2];
-		kmagrid[ci]=0.0;
+		ktmp=0.0;
 		for(j=0;j<3;++j)
-		{	p[ci].x[j] =  ((double) rand()/((double) RAND_MAX  ))*L[j];
-			
-			anchor[j] =   (int) (p[ci].x[j]/dx[j]); 
+		{	//
 			grid[ci][j] = (xcntr[j]%n)*dx[j];
 
+			p[ci].x[j] =  grid[ci][j];
+			
+			anchor[j] =   (int) (p[ci].x[j]/dx[j]); 
+
 			if((xcntr[j]<=n/2))
-				kmagrid[ci]+= ((xcntr[j]%n)*(xcntr[j]%n));
+				ktmp+= ((xcntr[j]%n)*(xcntr[j]%n));
 			else
-				kmagrid[ci]+= ((n/2-(xcntr[j]%n))*(n/2-(xcntr[j]%n)));
+				ktmp+= ((n/2-(xcntr[j]%n))*(n/2-(xcntr[j]%n)));
 
 			 
 			
@@ -721,9 +728,10 @@ void initialise()
 			p[ci].cubeind[5] = ((anchor[0]+1)%n)*n*n + anchor[1]*n +   ((anchor[2]+1)%n);
 			p[ci].cubeind[6] = anchor[0]*n*n + ((anchor[1]+1)%n)*n +   ((anchor[2]+1)%n);
 			p[ci].cubeind[7] = ((anchor[0]+1)%n)*n*n + ((anchor[1]+1)%n)*n + ((anchor[2]+1)%n);
+		if(ktmp>maxkmagsqr)
+		maxkmagsqr = sqrt(ktmp);
 
-
-		kmagrid[ci] = (int)(sqrt((double)kmagrid[ci])/(L[0]*dk));
+		kmagrid[ci] = (int)(sqrt(ktmp)/(dk));
 		// printf("yo  %d\n",kmagrid[ci]);
 		++kbincnt[kmagrid[ci]];
 
@@ -738,7 +746,7 @@ void initialise()
 		
       	}
   
-	ini_displace_particle(0.5);
+	ini_displace_particle(2.2);
 
 
 	for(ci=0;ci<tN;++ci)
@@ -811,9 +819,11 @@ void initialise()
 
 	cal_dc_fr_particles();
 	cal_spectrum(density_contrast);
+	cal_spectrum(ini_density_contrast);
 	
 
 	printf("Initialization Complete.\n");
+	printf("K details\n  dk is %lf\n   Max kmahsqr is %lf\n kbins is %d\n",dk,kbins,maxkmagsqr);
 	
 
 	  
