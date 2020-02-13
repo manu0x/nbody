@@ -76,7 +76,8 @@ int jprint;
 double H0, Hi;
 
 FILE *fpback;
-FILE *fptest;
+FILE *fptest1;
+FILE *fptest2;
 
 
 void background();
@@ -99,13 +100,15 @@ void main()
 {       Mpl = 1.0/sqrt(8.0*3.142*G) ;
         da = 0.00001;
         jprint = (int) (0.001/da);
-	printf("jprint %d\n",jprint);
+	
 	tN=n*n*n;
-         
+        
+	printf("jprint %d %d\n",jprint,tN); 
 	//feenableexcept(FE_DIVBYZERO | FE_ItNVALID | FE_OVERFLOW);
 
 	
-	fptest  = fopen("test.txt","w");
+	fptest1  = fopen("test1.txt","w");
+	fptest2  = fopen("test2.txt","w");
 	fpback  = fopen("back.txt","w");
 	fppwspctrm  = fopen("pwspctrm.txt","w");
 
@@ -232,7 +235,7 @@ void cal_dc_fr_particles()
 
 	int i,j,k,p_id;
 	int anchor[3];
-	double rvphi=0.0,del[8],deld;
+	double rvphi=0.0,del[8],deld,tsum=0.0;
   for(j=0;j<tN;++j)
   {
     density_contrast[j]=0.0;
@@ -241,7 +244,11 @@ void cal_dc_fr_particles()
 
 
   for(p_id=0;p_id<tN;++p_id)
-    {	for(i=0;i<8;++i)
+    {	
+	
+	 	fprintf(fptest2,"%d\t%.10lf\t%.10lf\t%.10lf\n\n\n",p_id,p[p_id].x[0],p[p_id].x[1],p[p_id].x[2]);
+
+	for(i=0;i<8;++i)
 	{
 		k = p[p_id].cubeind[i];
 		del[i] = 1.0;
@@ -249,31 +256,41 @@ void cal_dc_fr_particles()
 		{
 			deld = (fabs(p[p_id].x[j]-grid[k][j]));
 
- 			if(deld>=dx[j])
-			del[i]=0.0;
-			else
+ 			//if(deld>=dx[j])
+			//del[i]=0.0;
+			//else
 			del[i]*=(1.0-(deld/dx[j]));
+			
+			//if(deld>dx[j])
+			{
+			 
+			}
 
 
 		}
 			
-		
-		density_contrast[k]+= del[i];
+		fprintf(fptest1,"%d\t%d\t%.20lf\t%.20lf\t%.20lf\n",p_id,k,grid[k][0],grid[k][1],grid[k][2]);		
 
-		//printf("ttt %d %.10lf\n",k,deld);
+
+		density_contrast[k]+= del[i];
+		tsum+=del[i];
+
+		//printf("ttt %d %.10lf\n",k,density_contrast[k]);
 		
-	}	
+	} fprintf(fptest1,"\n\n\n\n");	
 	
    }
-	fprintf(fptest,"\n\n\n\n");
+	//fprintf(fptest,"\n\n\n\n");
    for(i=0;i<tN;++i)
 	{
 		//printf("dc %lf\n",density_contrast[i]);
-		density_contrast[i]=(density_contrast[i]*(n-1.0)*(n-1.0)*(n-1.0)/(n*n*n)-1.0) ;
-		fprintf(fptest,"%d\t%.20lf\t%.20lf\n",i,ini_density_contrast[i],density_contrast[i]);
+		//density_contrast[i]= ;
+		//fprintf(fptest1,"%d\t%.20lf\t%.30lf\n",i,ini_density_contrast[i],density_contrast[i]);
 
 	}
 
+
+	printf("Tot part calcu %lf\n",tsum);
 
 }
 
@@ -436,12 +453,12 @@ void ini_rand_field()
 		ini_vel1[cnt] = ini_v1[cnt][0];
 		ini_vel2[cnt] = ini_v2[cnt][0];  
 
-		fprintf(fptest,"%d\t%lf\n",cnt,ini_del[cnt][0]);
+		//fprintf(fptest,"%d\t%lf\n",cnt,ini_del[cnt][0]);
 
 		
 
 	}
-        fprintf(fptest,"\n\n\n\n");
+        //fprintf(fptest,"\n\n\n\n");
 	 fftw_free(F_ini_phi);
 	 fftw_free(F_ini_del);
 	 fftw_free(F_ini_v0);
@@ -702,13 +719,13 @@ void initialise()
 
 			p[ci].x[j] =  grid[ci][j];
 			
-			anchor[j] =   (int) (p[ci].x[j]/dx[j]); 
+			//anchor[j] =   (int) (p[ci].x[j]/dx[j]); 
 
 			if((xcntr[j]<=n/2))
 				ktmp+= ((xcntr[j]%n)*(xcntr[j]%n));
 			else
 				ktmp+= ((n/2-(xcntr[j]%n))*(n/2-(xcntr[j]%n)));
-
+		
 			 
 			
 		
@@ -720,14 +737,7 @@ void initialise()
 
 
 			
-			p[ci].cubeind[0] = anchor[0]*n*n + anchor[1]*n + anchor[2];
-			p[ci].cubeind[1] = ((anchor[0]+1)%n)*n*n + anchor[1]*n + anchor[2];
-			p[ci].cubeind[2] = anchor[0]*n*n + ((anchor[1]+1)%n)*n +   anchor[2];
-			p[ci].cubeind[3] = anchor[0]*n*n + anchor[1]*n  + ((anchor[2]+1)%n);
-			p[ci].cubeind[4] = ((anchor[0]+1)%n)*n*n + ((anchor[1]+1)%n)*n + anchor[2];
-			p[ci].cubeind[5] = ((anchor[0]+1)%n)*n*n + anchor[1]*n +   ((anchor[2]+1)%n);
-			p[ci].cubeind[6] = anchor[0]*n*n + ((anchor[1]+1)%n)*n +   ((anchor[2]+1)%n);
-			p[ci].cubeind[7] = ((anchor[0]+1)%n)*n*n + ((anchor[1]+1)%n)*n + ((anchor[2]+1)%n);
+			
 		if(ktmp>maxkmagsqr)
 		maxkmagsqr = sqrt(ktmp);
 
@@ -745,16 +755,13 @@ void initialise()
 		 phi_a[ci] = 0.0;
 		
       	}
-  
-	ini_displace_particle(2.2);
-
 
 	for(ci=0;ci<tN;++ci)
 	  {
 	     for(j=0;j<3;++j)
 		  {	
 			
-			anchor[j] =  ( n + (int) (p[ci].x[j]/dx[j]))%n; 
+			anchor[j] =  ( n + (int) floor(p[ci].x[j]/dx[j]))%n;
 			
 			 
 			
@@ -776,6 +783,61 @@ void initialise()
 			p[ci].cubeind[5] = ((anchor[0]+1)%n)*n*n + anchor[1]*n +   ((anchor[2]+1)%n);
 			p[ci].cubeind[6] = anchor[0]*n*n + ((anchor[1]+1)%n)*n +   ((anchor[2]+1)%n);
 			p[ci].cubeind[7] = ((anchor[0]+1)%n)*n*n + ((anchor[1]+1)%n)*n + ((anchor[2]+1)%n);
+
+			
+	}
+
+
+
+  
+	//ini_displace_particle(0.0);
+
+
+	for(ci=0;ci<tN;++ci)
+	  {
+	     for(j=0;j<3;++j)
+		  {	
+			
+			anchor[j] =  ( n + (int) floor(p[ci].x[j]/dx[j]))%n; 
+
+			
+			
+			
+			 
+			
+		
+			//printf("grid ini  %d  %d  %d %lf\n",ci,j,(xcntr[j]%n),grid[ci][j]);
+		  }
+		
+		
+
+		tul00[ci]= 0.0;
+		tuldss[ci]=0.0;
+			
+			p[ci].cubeind[0] = anchor[0]*n*n + anchor[1]*n + anchor[2];
+			p[ci].cubeind[1] = ((anchor[0]+1)%n)*n*n + anchor[1]*n + anchor[2];
+			p[ci].cubeind[2] = anchor[0]*n*n + ((anchor[1]+1)%n)*n +   anchor[2];
+			p[ci].cubeind[3] = anchor[0]*n*n + anchor[1]*n  + ((anchor[2]+1)%n);
+			p[ci].cubeind[4] = ((anchor[0]+1)%n)*n*n + ((anchor[1]+1)%n)*n + anchor[2];
+			p[ci].cubeind[5] = ((anchor[0]+1)%n)*n*n + anchor[1]*n +   ((anchor[2]+1)%n);
+			p[ci].cubeind[6] = anchor[0]*n*n + ((anchor[1]+1)%n)*n +   ((anchor[2]+1)%n);
+			p[ci].cubeind[7] = ((anchor[0]+1)%n)*n*n + ((anchor[1]+1)%n)*n + ((anchor[2]+1)%n);
+
+
+		/*	if(ci==1)
+		{printf("\n anchor %lf\t%lf\t%lf\n\n",grid[anchor[0]][0],grid[anchor[1]][1],grid[anchor[2]][2]);
+
+			for(j=0;j<8;++j)
+			{
+				printf("\n anchor %lf\t%lf\t%lf",grid[p[ci].cubeind[j]][0],grid[p[ci].cubeind[j]][0],grid[p[ci].cubeind[j]][0]);
+
+ 			}
+		
+		// printf("\n anchor %lf\t%lf\t%lf\n\n",p[ci].x[0],p[ci].x[1],p[ci].x[2]);
+			printf("\n\n");		 
+		}
+		*/
+
 	}
 
 
