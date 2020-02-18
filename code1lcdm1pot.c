@@ -235,7 +235,8 @@ void cal_dc_fr_particles()
 
 	int i,j,k,p_id;
 	int anchor[3];
-	double rvphi=0.0,del[8],deld,tsum=0.0;
+	double rvphi=0.0,del[8];
+	double deld,tsum=0.0;
   for(j=0;j<tN;++j)
   {
     density_contrast[j]=0.0;
@@ -256,20 +257,34 @@ void cal_dc_fr_particles()
 		{
 			deld = (fabs(p[p_id].x[j]-grid[k][j]));
 
- 			//if(deld>=dx[j])
-			//del[i]=0.0;
-			//else
-			del[i]*=(1.0-(deld/dx[j]));
 			
-			//if(deld>dx[j])
+			if(deld>dx[j])
 			{
-			 
+				deld = dx[j] - dx[j]*(deld/dx[j] - floor(deld/dx[j]));
+
 			}
 
+			
+
+ 			
+			
+			del[i]*=(1.0-(deld/dx[j]));
+
+			
+
+			
+			
+			
 
 		}
+
+	
+
 			
-		fprintf(fptest1,"%d\t%d\t%.20lf\t%.20lf\t%.20lf\n",p_id,k,grid[k][0],grid[k][1],grid[k][2]);		
+		//fprintf(fptest1,"%d\t%d\t%.20lf\t%.20lf\t%.20lf\n",p_id,k,grid[k][0],grid[k][1],grid[k][2]);		
+
+
+		
 
 
 		density_contrast[k]+= del[i];
@@ -277,15 +292,15 @@ void cal_dc_fr_particles()
 
 		//printf("ttt %d %.10lf\n",k,density_contrast[k]);
 		
-	} fprintf(fptest1,"\n\n\n\n");	
+	} //fprintf(fptest1,"\n\n\n\n");	
 	
    }
 	//fprintf(fptest,"\n\n\n\n");
    for(i=0;i<tN;++i)
 	{
 		//printf("dc %lf\n",density_contrast[i]);
-		//density_contrast[i]= ;
-		//fprintf(fptest1,"%d\t%.20lf\t%.30lf\n",i,ini_density_contrast[i],density_contrast[i]);
+		density_contrast[i]-=1.0 ;
+		fprintf(fptest1,"%d\t%.20lf\t%.30lf\n",i,ini_density_contrast[i],density_contrast[i]);
 
 	}
 
@@ -293,7 +308,6 @@ void cal_dc_fr_particles()
 	printf("Tot part calcu %lf\n",tsum);
 
 }
-
 
 void ini_rand_field()
 {	init_genrand(time(0));
@@ -790,7 +804,7 @@ void initialise()
 
 
   
-	//ini_displace_particle(0.0);
+	ini_displace_particle(0.5);
 
 
 	for(ci=0;ci<tN;++ci)
