@@ -300,7 +300,7 @@ void cal_dc_fr_particles()
 	{
 		//printf("dc %lf\n",density_contrast[i]);
 		density_contrast[i]-=1.0 ;
-		fprintf(fptest1,"%d\t%.20lf\t%.30lf\n",i,ini_density_contrast[i],density_contrast[i]);
+		//fprintf(fptest1,"%d\t%.20lf\t%.30lf\n",i,ini_density_contrast[i],density_contrast[i]);
 
 	}
 
@@ -495,7 +495,7 @@ void ini_rand_field()
 void ini_displace_particle(double thres)
 {	double ds=0.001,maxv,dist,mind;
 	int i,ci,k,ngp,j;
-
+  
 	 for(ci=0;ci<tN;++ci)
 	  {
 		mind=L[0];	
@@ -533,7 +533,7 @@ void ini_displace_particle(double thres)
 
 
 		
-		//fprintf(fptest,"%d\t%.10lf\t%.10lf\t%.10lf\n",ci,ini_vel0[ci],ini_vel1[ci],ini_vel2[ci]);
+		fprintf(fptest1,"%d\t%.10lf\t%.10lf\t%.10lf\n",ci,ini_vel0[ci],ini_vel1[ci],ini_vel2[ci]);
 
 		if(fabs(p[ci].v[0])>maxv)
 		maxv = p[ci].v[0];
@@ -556,7 +556,7 @@ void ini_displace_particle(double thres)
 		for(i=0;i<3;++i)
 		{	p[ci].x[i] = p[ci].x[i] + ds*p[ci].v[i];
 			if((p[ci].x[i]>L[i])||(p[ci].x[i]<0.0))
-				p[ci].x[i] = fmod(p[ci].x[i]+L[i],L[i]);
+				p[ci].x[i] = L[i]*( (2.0*L[i]+p[ci].x[i]) /L[i]  - floor(  (2.0*L[i]+p[ci].x[i]) /L[i]) );
 
 			
 		}
