@@ -1,3 +1,11 @@
+/////////////////////////////////    CHECKs to be done	//////////////////////////
+
+//// (1)  Check calculations of l and r for finite diff. neighbours ////////////////////////////////
+//// (2)  Check if quantities which are summed over are set to zero at appropriate places
+//// (3)  Definitions for psty and usty
+//// (4)  Recheck boundary looping back for both indices and space coordinates
+
+
 #include <fftw3.h>
 #include <math.h>
 #include <stdio.h>
@@ -78,6 +86,7 @@ double H0, Hi;
 FILE *fpback;
 FILE *fptest1;
 FILE *fptest2;
+FILE *fpdc;
 
 
 void background();
@@ -109,6 +118,7 @@ void main()
 	
 	fptest1  = fopen("test1.txt","w");
 	fptest2  = fopen("test2.txt","w");
+	fpdc  = fopen("dc.txt","w");
 	fpback  = fopen("back.txt","w");
 	fppwspctrm  = fopen("pwspctrm.txt","w");
 
@@ -157,9 +167,12 @@ void main()
 	initialise();
 	
 
-   //    i = evolve(ai,10.0);
-     //  cal_dc_fr_particles();
-      // cal_spectrum(density_contrast);
+        i = evolve(ai,10.0);
+       cal_dc_fr_particles();
+       cal_spectrum(density_contrast);
+	
+	if(i!=1)
+	printf("\nIt's gone...\n");
 
 
 
@@ -201,7 +214,7 @@ void cal_spectrum(double *spcmesh)
 		pwspctrm[kmagrid[i]]+=  (Fdens_cntrst[i][1]*Fdens_cntrst[i][1] + Fdens_cntrst[i][0]*Fdens_cntrst[i][0]);
 
 	}
-	fprintf(fppwspctrm,"\n\n\n\n");
+	
 	for(i=0;i<=kbins;++i)
 	{
 
@@ -214,7 +227,7 @@ void cal_spectrum(double *spcmesh)
 	
 	fftw_free(Fdens_cntrst);
 	fftw_destroy_plan(spec_plan);
-
+	fprintf(fppwspctrm,"\n\n\n\n");
 }
 
 
@@ -296,15 +309,19 @@ void cal_dc_fr_particles()
 	
    }
 	//fprintf(fptest,"\n\n\n\n");
+
+	tsum=0.0;
    for(i=0;i<tN;++i)
 	{
 		//printf("dc %lf\n",density_contrast[i]);
+		tsum+=density_contrast[i];
 		density_contrast[i]-=1.0 ;
-		//fprintf(fptest1,"%d\t%.20lf\t%.30lf\n",i,ini_density_contrast[i],density_contrast[i]);
+		fprintf(fpdc,"%d\t%.20lf\t%.10lf\t%.10lf\t%.10lf\t%.30lf\n",i,grid[i][0],grid[i][1],grid[i][2],ini_density_contrast[i],density_contrast[i]);
 
 	}
 
-
+	fprintf(fpdc,"\n\n\n");
+	fprintf(fptest2,"\n\n\n");
 	printf("Tot part calcu %lf\n",tsum);
 
 }
@@ -533,7 +550,7 @@ void ini_displace_particle(double thres)
 
 
 		
-		fprintf(fptest1,"%d\t%.10lf\t%.10lf\t%.10lf\n",ci,ini_vel0[ci],ini_vel1[ci],ini_vel2[ci]);
+		fprintf(fptest1,"%d\t%.20lf\t%.20lf\t%.20lf\n",ci,p[ci].v[0],p[ci].v[1],p[ci].v[2]);
 
 		if(fabs(p[ci].v[0])>maxv)
 		maxv = p[ci].v[0];
@@ -627,13 +644,22 @@ void particle2mesh(struct particle * pp,int p_id,double *meshphi,double ap)
 		del[i] = 1.0;
 		for(j=0;j<3;++j)
 		{
-			deld = (fabs(pp[p_id].x[j]-grid[k][j]));
+			deld = (fabs(p[p_id].x[j]-grid[k][j]));
 
- 			if(deld>=dx[j])
-			del[i]=0.0;
-			else
+			
+			if(deld>dx[j])
+			{
+				deld = dx[j] - dx[j]*(deld/dx[j] - floor(deld/dx[j]));
+
+			}
+
+			
+
+ 			
+			
 			del[i]*=(1.0-(deld/dx[j]));
 
+			
 
 		}
 			
@@ -707,7 +733,7 @@ void initialise()
      a_t=Hi*ai;
 
 	dx[0] = 0.001; dx[1] =0.001; dx[2] = 0.001;
-        L[0] = dx[0]*((double) (n-1));  L[1] = dx[1]*((double) (n-1));  L[2] = dx[2]*((double) (n-1));
+        L[0] = dx[0]*((double) (n));  L[1] = dx[1]*((double) (n));  L[2] = dx[2]*((double) (n));
 	dk = 0.0001/dx[0]; kbins = 0;
 
 	ini_rand_field();
@@ -729,7 +755,7 @@ void initialise()
 		ktmp=0.0;
 		for(j=0;j<3;++j)
 		{	//
-			grid[ci][j] = (xcntr[j]%n)*dx[j];
+			grid[ci][j] = ((double)(xcntr[j]%n))*dx[j];
 
 			p[ci].x[j] =  grid[ci][j];
 			
@@ -804,7 +830,7 @@ void initialise()
 
 
   
-	ini_displace_particle(0.5);
+	ini_displace_particle(0.00000299);
 
 
 	for(ci=0;ci<tN;++ci)
@@ -827,6 +853,8 @@ void initialise()
 
 		tul00[ci]= 0.0;
 		tuldss[ci]=0.0;
+		usty[ci] = 0.0;
+		psty[ci] = 0.0;
 			
 			p[ci].cubeind[0] = anchor[0]*n*n + anchor[1]*n + anchor[2];
 			p[ci].cubeind[1] = ((anchor[0]+1)%n)*n*n + anchor[1]*n + anchor[2];
@@ -869,6 +897,9 @@ void initialise()
 	    
 	    for(j=0;j<3;++j)
 	     {	 
+		
+
+
 		l1 = (tN+ci-((int)(pow(n,2-j))))%tN;
 		l2 = (tN+ci-2*((int)(pow(n,2-j))))%tN;
 		r1 = (tN+ci+((int)(pow(n,2-j))))%tN;
@@ -966,8 +997,8 @@ int evolve(double aini, double astp)
 			tmpp[ci].x[i] = p[ci].x[i] + 0.5*da*p[ci].v[i];
 			tmpp[ci].v[i] = p[ci].v[i] + 0.5*da*pacc[i]; 
 
-		if((tmpp[ci].x[i]>L[i])||(tmpp[ci].x[i]<0.0))
-			tmpp[ci].x[i] = fmod(tmpp[ci].x[i]+L[i],L[i]);
+		if((tmpp[ci].x[i]>=L[i])||(tmpp[ci].x[i]<0.0))
+			tmpp[ci].x[i] =  L[i]*(tmpp[ci].x[i]/L[i] - floor(tmpp[ci].x[i]/L[i]));
 		
 		
 			anchor[i] =   (int) (tmpp[ci].x[i]/dx[i]);
@@ -1083,7 +1114,7 @@ int evolve(double aini, double astp)
 			p[ci].v[i] = p[ci].v[i] + da*pacc[i]; 
 
 		if((p[ci].x[i]>L[i])||(p[ci].x[i]<0.0))
-			p[ci].x[i] = fmod(p[ci].x[i]+L[i],L[i]);
+			p[ci].x[i] =  L[i]*(p[ci].x[i]/L[i] - floor(p[ci].x[i]/L[i]));
 		
 
 
@@ -1168,6 +1199,9 @@ int evolve(double aini, double astp)
     }    
 	
    }
+
+
+
  return(fail);
 }
 
