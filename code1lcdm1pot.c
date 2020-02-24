@@ -80,7 +80,7 @@ int nic[n*n*n][16];
 
 double  omdmb, omdeb, a, ak, a_t, a_tt, Vamp, ai, a0, da;
 double cpmc = (0.14/(0.68*0.68));
-int jprint;
+int jprint,jprints;
 double H0, Hi;
 
 FILE *fpback;
@@ -109,6 +109,7 @@ void main()
 {       Mpl = 1.0/sqrt(8.0*3.142*G) ;
         da = 0.00001;
         jprint = (int) (0.001/da);
+	jprints = (int) (0.1/da);
 	
 	tN=n*n*n;
         
@@ -167,7 +168,8 @@ void main()
 	initialise();
 	
 
-        i = evolve(ai,10.0);
+        i = evolve(ai,a0/ai);
+	
        cal_dc_fr_particles();
        cal_spectrum(density_contrast);
 	
@@ -729,6 +731,7 @@ void initialise()
       ai = 0.001;
       a = ai;
       omdmb= (cpmc)*pow((a0/ai),3.0)/(cpmc*a0*a0*a0/(ai*ai*ai) + (1.0-cpmc));
+      printf("omdmb  %.10lf\n",omdmb);
 
      a_t=Hi*ai;
 
@@ -959,15 +962,25 @@ int evolve(double aini, double astp)
 
     for(a=aini,lcntr=0;((a/ai)<=astp)&&(fail==1);++lcntr)
     { if(lcntr%jprint==0)
-	   printf("a  %lf %d\n",a/ai,j);
+	   printf("a  %lf %.10lf\n",a/ai,ommi);
           
           
 	  a_t = Hi*sqrt(ommi*ai*ai*ai/(a)  + (1.0-ommi)*a*a ) ; 
        
         a_tt =  -0.5*ommi*Hi*Hi*ai*ai*ai/(a*a) + (1.0-ommi)*Hi*Hi*a;
          
-	  
-	  
+	  if(lcntr%jprint==0)
+	  fprintf(fpback,"%lf\t%.10lf\t%.10lf\n",a/ai,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t));
+
+
+	if((lcntr%jprints==0)&&(a!=ai))
+	   {
+
+		 cal_dc_fr_particles();
+      		 cal_spectrum(density_contrast);
+
+
+	  }
 
 /////////////////////////////////particle force calculation*****Step 1////////////////////////////////////////////////		 
 
