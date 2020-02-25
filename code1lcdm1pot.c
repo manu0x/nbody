@@ -221,7 +221,7 @@ void cal_spectrum(double *spcmesh)
 	{
 
 		if(kbincnt[i]!=0)
-		fprintf(fppwspctrm,"%lf\t%lf\n",i*dk,pwspctrm[i]/(kbincnt[i]));
+		fprintf(fppwspctrm,"%lf\t%.10lf\n",i*dk,pwspctrm[i]/(kbincnt[i]));
 
 
 
@@ -238,7 +238,7 @@ double ini_power_spec(double kamp)
 {
 
 
-	return(0.0011);
+	return(0.001);
 
 
 }
@@ -353,7 +353,7 @@ void ini_rand_field()
 			{   cnt = i*n*n + j*n + k;
 				if(maxcnt<cnt)
 			    	 maxcnt = cnt;
-			   	ksqr = 2.0*M_PI*2.0*M_PI*
+			   	ksqr = 1.0*
 					(((double) ief)*((double) ief)/(dx[0]*dx[0]) 
 					+ ((double) jef)*((double) jef)/(dx[1]*dx[1])+ ((double) k)*((double) k)/(dx[2]*dx[2]) ) 
 					/(((double) n)*((double) n));
@@ -833,7 +833,7 @@ void initialise()
 
 
   
-	ini_displace_particle(0.00000299);
+	ini_displace_particle(0.00000769);
 
 
 	for(ci=0;ci<tN;++ci)
@@ -928,9 +928,9 @@ void initialise()
 	free(ini_vel0); free(ini_vel1); free(ini_vel2);
 
 	cal_dc_fr_particles();
-	cal_spectrum(density_contrast);
-	cal_spectrum(ini_density_contrast);
 	
+	cal_spectrum(ini_density_contrast);
+	cal_spectrum(density_contrast);
 
 	printf("Initialization Complete.\n");
 	printf("K details\n  dk is %lf\n   Max kmahsqr is %lf\n kbins is %d\n",dk,kbins,maxkmagsqr);
