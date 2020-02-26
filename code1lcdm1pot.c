@@ -1,9 +1,15 @@
+/////////////////////////////////  Notes ///////////////////////////////////
+
+///// (1) k = 1/lambda, 2pi factors are already in fftw transforms; be careful of 2pi factors in spectrum related calculations
+
+
 /////////////////////////////////    CHECKs to be done	//////////////////////////
 
 //// (1)  Check calculations of l and r for finite diff. neighbours ////////////////////////////////
 //// (2)  Check if quantities which are summed over are set to zero at appropriate places
 //// (3)  Definitions for psty and usty
 //// (4)  Recheck boundary looping back for both indices and space coordinates
+////
 
 
 #include <fftw3.h>
@@ -15,7 +21,9 @@
 #include <time.h>
 #include "mt19937ar.c"
 
-#define  n 32
+#define  n 64
+
+#define tpie  2.0*M_PI
 
 FILE *fppwspctrm;
 
@@ -168,13 +176,13 @@ void main()
 	initialise();
 	
 
-        i = evolve(ai,a0/ai);
+     //   i = evolve(ai,a0/ai);
 	
-       cal_dc_fr_particles();
-       cal_spectrum(density_contrast);
+    //   cal_dc_fr_particles();
+     //  cal_spectrum(density_contrast);
 	
-	if(i!=1)
-	printf("\nIt's gone...\n");
+	//if(i!=1)
+	//printf("\nIt's gone...\n");
 
 
 
@@ -213,7 +221,7 @@ void cal_spectrum(double *spcmesh)
 	for(i=0;i<tN;++i)
 	{
 		
-		pwspctrm[kmagrid[i]]+=  (Fdens_cntrst[i][1]*Fdens_cntrst[i][1] + Fdens_cntrst[i][0]*Fdens_cntrst[i][0]);
+		pwspctrm[kmagrid[i]]+=  sqrt(Fdens_cntrst[i][1]*Fdens_cntrst[i][1] + Fdens_cntrst[i][0]*Fdens_cntrst[i][0]);
 
 	}
 	
@@ -221,7 +229,7 @@ void cal_spectrum(double *spcmesh)
 	{
 
 		if(kbincnt[i]!=0)
-		fprintf(fppwspctrm,"%lf\t%.10lf\n",i*dk,pwspctrm[i]/(kbincnt[i]));
+		fprintf(fppwspctrm,"%lf\t%lf\t%.10lf\n",a/ai,i*dk,pwspctrm[i]/(kbincnt[i]));
 
 
 
@@ -238,7 +246,7 @@ double ini_power_spec(double kamp)
 {
 
 
-	return(0.001);
+	return(0.01);
 
 
 }
@@ -370,8 +378,8 @@ void ini_rand_field()
 
 
 			    if(ksqr!=0.0)
-			    {F_ini_phi[cnt][0] = -1.5*omdmb*Hi*Hi*ai*ai*F_ini_del[cnt][0]/ksqr;	
-			     F_ini_phi[cnt][1] = -1.5*omdmb*Hi*Hi*ai*ai*F_ini_del[cnt][1]/ksqr;
+			    {F_ini_phi[cnt][0] = -1.5*tpie*tpie*omdmb*Hi*Hi*ai*ai*F_ini_del[cnt][0]/ksqr;	
+			     F_ini_phi[cnt][1] = -1.5*omdmb*tpie*tpie*Hi*Hi*ai*ai*F_ini_del[cnt][1]/ksqr;
 			    }
 			  else
 			    {F_ini_phi[cnt][0] = 0.0;	
@@ -380,12 +388,12 @@ void ini_rand_field()
 		
 			
 
-			   F_ini_v2[cnt][0] =  -k*F_ini_phi[cnt][1]/(dx[2]*n);
-		 	   F_ini_v2[cnt][1] =  k*F_ini_phi[cnt][0]/(dx[2]*n);
+			   F_ini_v2[cnt][0] =  -tpie*k*F_ini_phi[cnt][1]/(dx[2]*n);
+		 	   F_ini_v2[cnt][1] =  tpie*k*F_ini_phi[cnt][0]/(dx[2]*n);
 
 
-  		 	// if(k!=0)
-			  {
+  		 	 if((k>0)&&(k<(n/2)))
+			   {			
 
 			  	rk = (n-k);
 				rcnt = i*n*n + j*n + rk; 
@@ -421,10 +429,14 @@ void ini_rand_field()
 				rk = (n-j);
 				rcnt = i*n*n + rk*n + k;
 
-				F_ini_v1[cnt][0] =  -j*F_ini_phi[cnt][1]/(dx[1]*n);
-				F_ini_v1[cnt][1] =  j*F_ini_phi[cnt][0]/(dx[1]*n);
-
+				F_ini_v1[cnt][0] =  -tpie*j*F_ini_phi[cnt][1]/(dx[1]*n);
+				F_ini_v1[cnt][1] =  tpie*j*F_ini_phi[cnt][0]/(dx[1]*n);
+		        	if((j>0)&&(j<(n/2)))
+			        {				
 				F_ini_v1[rcnt][0] = F_ini_v1[rcnt][0];	F_ini_v1[rcnt][1] = -F_ini_v1[cnt][1];
+				}			
+
+
 			}
 
 		
@@ -444,10 +456,13 @@ void ini_rand_field()
 				rk = (n-i);
 				rcnt = rk*n*n + j*n + k;
 
-				F_ini_v0[cnt][0] =  -i*F_ini_phi[cnt][1]/(dx[0]*n);
-				F_ini_v0[cnt][1] =  i*F_ini_phi[cnt][0]/(dx[0]*n);
+				F_ini_v0[cnt][0] =  -i*tpie*F_ini_phi[cnt][1]/(dx[0]*n);
+				F_ini_v0[cnt][1] =  i*tpie*F_ini_phi[cnt][0]/(dx[0]*n);
 
+				if((i>0)&&(i<(n/2)))
+			        {			
 				F_ini_v0[rcnt][0] = F_ini_v0[rcnt][0];	F_ini_v0[rcnt][1] = -F_ini_v0[cnt][1];
+				}
 			}
 
 		
@@ -505,7 +520,7 @@ void ini_rand_field()
 	fftw_destroy_plan(ini_v1_plan);
 	fftw_destroy_plan(ini_v2_plan);
 
-	printf("Generated initial Gaussian Random field\n");
+	printf("Generated initial Gaussian Random field  %d\n",maxcnt);
 	
 }
 
@@ -737,7 +752,7 @@ void initialise()
 
 	dx[0] = 0.001; dx[1] =0.001; dx[2] = 0.001;
         L[0] = dx[0]*((double) (n));  L[1] = dx[1]*((double) (n));  L[2] = dx[2]*((double) (n));
-	dk = 0.0001/dx[0]; kbins = 0;
+	dk = 0.00001/dx[0]; kbins = 0;
 
 	ini_rand_field();
         
@@ -833,7 +848,7 @@ void initialise()
 
 
   
-	ini_displace_particle(0.00000769);
+	ini_displace_particle(0.00003069);
 
 
 	for(ci=0;ci<tN;++ci)
