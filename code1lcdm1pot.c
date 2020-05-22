@@ -31,7 +31,7 @@
 double G   = 1.0;
 double c   = 1.0;
 double Mpl ;
-double H0  = 22.04*(1e-5);
+double H0  = 22.04*3.0;
 double L[3];
 int tN;
 
@@ -86,7 +86,7 @@ int gridind[n*n*n][3];
 int nic[n*n*n][16];
 
 double  omdmb, omdeb, a, ak, a_t, a_tt, Vamp, ai, a0, da;
-double cpmc = 1.0;//(0.14/(0.68*0.68));
+double cpmc = (0.14/(0.68*0.68));
 int jprint,jprints;
 double H0, Hi;
 
@@ -97,6 +97,9 @@ FILE *fpdc;
 FILE *fppsi;
 FILE *fppwspctrm_dc;
 FILE *fppwspctrm_phi;
+FILE *fpfields;
+FILE *fplinscale;
+
 
 
 void background();
@@ -114,10 +117,11 @@ int evolve(double ,double );
 void cal_spectrum(double *,FILE *);
 void cal_dc_fr_particles();
 void clear_Tmunu();
+void write_fields();
 
 void main()
 {       Mpl = 1.0/sqrt(8.0*3.142*G) ;
-        da = 0.00001;
+        da = 0.00005;
         jprint = (int) (0.001/da);
 	jprints = jprint;
 	
@@ -127,6 +131,7 @@ void main()
 	//feenableexcept(FE_DIVBYZERO | FE_ItNVALID | FE_OVERFLOW);
 
 	
+	
 	fptest1  = fopen("test1.txt","w");
 	fptest2  = fopen("test2.txt","w");
 	fpdc  = fopen("dc.txt","w");
@@ -134,6 +139,8 @@ void main()
 	fppwspctrm_dc  = fopen("pwspctrm_dc.txt","w");
 	fppwspctrm_phi  = fopen("pwspctrm_phi.txt","w");
 	fppsi = fopen("psi.txt","w");
+	fpfields = fopen("fields.txt","w");
+	fplinscale = fopen("linscale.txt","w");
 
         int i;
 
@@ -330,7 +337,8 @@ void cal_dc_fr_particles()
 		//printf("dc %lf\n",density_contrast[i]);
 		tsum+=density_contrast[i];
 		density_contrast[i]-=1.0 ;
-		fprintf(fpdc,"%d\t%.20lf\t%.10lf\t%.10lf\t%.10lf\t%.30lf\n",i,grid[i][0],grid[i][1],grid[i][2],ini_density_contrast[i],density_contrast[i]);
+		fprintf(fpdc,"%d\t%lf\t%.10lf\t%.10lf\t%.10lf\t%.30lf\t%.30lf\n",i,a/ai,grid[i][0],grid[i][1],grid[i][2],ini_density_contrast[i],density_contrast[i]);
+
 
 	}
 
@@ -382,8 +390,11 @@ void ini_rand_field()
 
 
 			    if(ksqr!=0.0)
-			    {F_ini_phi[cnt][0] = -1.5*tpie*tpie*omdmb*Hi*Hi*ai*ai*F_ini_del[cnt][0]/ksqr;	
-			     F_ini_phi[cnt][1] = -1.5*omdmb*tpie*tpie*Hi*Hi*ai*ai*F_ini_del[cnt][1]/ksqr;
+			    {F_ini_phi[cnt][0] = -1.5*tpie*tpie*omdmb*Hi*Hi*F_ini_del[cnt][0]/(ksqr/(ai*ai) -3.0*Hi*Hi);	
+			     F_ini_phi[cnt][1] = -1.5*omdmb*tpie*tpie*Hi*Hi*F_ini_del[cnt][1]/(ksqr/(ai*ai) -3.0*Hi*Hi);
+
+				 fprintf(fplinscale,"%d\t%.20lf\t%.20lf\t%.20lf\n",
+					        cnt,ksqr/(ai*ai), -3.0*Hi*Hi,(ksqr/(ai*ai))/(3.0*Hi*Hi) );	
 			    }
 			  else
 			    {F_ini_phi[cnt][0] = 0.0;	
@@ -710,7 +721,7 @@ void particle2mesh(struct particle * pp,int p_id,double *meshphi,double ap)
 
 
 void background()
-{ H0 =24.76*(1e-5);
+{ 
    
    Vamp =1.0;
    int j;
@@ -733,6 +744,23 @@ void background()
 
 
 
+void write_fields()
+{
+	int i;
+	for(i=0;i<tN;++i)
+	{
+
+
+		fprintf(fpfields,"%d\t%lf\t%.20lf\t%.20lf\n",i,a/ai,density_contrast[i],phi[i]);
+
+
+	}
+
+	fprintf(fpfields,"\n\n\n");
+
+}
+
+
 
 
 
@@ -749,7 +777,7 @@ void initialise()
       a0 = 1.00;
       ai = 0.001;
       a = ai;
-      omdmb= 1.0;//(cpmc)*pow((a0/ai),3.0)/(cpmc*a0*a0*a0/(ai*ai*ai) + (1.0-cpmc));
+      omdmb= (cpmc)*pow((a0/ai),3.0)/(cpmc*a0*a0*a0/(ai*ai*ai) + (1.0-cpmc));
       printf("omdmb  %.10lf\n",omdmb);
 
      a_t=Hi*ai;
@@ -784,17 +812,21 @@ void initialise()
 			//anchor[j] =   (int) (p[ci].x[j]/dx[j]); 
 
 			if((xcntr[j]<=n/2))
-				ktmp+= ((xcntr[j]%n)*(xcntr[j]%n))/(L[j]*L[j]);
+				{ktmp+= ((xcntr[j]%n)*(xcntr[j]%n))/(L[j]*L[j]);
+				 //k_grid[ci][j] = (xcntr[j]%n)/L[j];
+				}
 			else
-				ktmp+= ((n/2-(xcntr[j]%n))*(n/2-(xcntr[j]%n)))/(L[j]*L[j]);
+				{ ktmp+= ((n/2-(xcntr[j]%n))*(n/2-(xcntr[j]%n)))/(L[j]*L[j]);
+				  //k_grid[ci][j] = ((n/2-(xcntr[j]%n)))/L[j];
+				}
 		
 			 
-			fprintf(fptest1,"%d\t%lf\t",xcntr[j],grid[ci][j]);
+			//fprintf(fptest1,"%d\t%lf\t",xcntr[j],grid[ci][j]);
 			
 			//printf("grid ini  %d  %d  %d %lf\n",ci,j,(xcntr[j]%n),grid[ci][j]);
 		}
 		
-		fprintf(fptest1,"%lf\n",sqrt(ktmp));
+		//fprintf(fptest1,"%lf\n",sqrt(ktmp));
 		
 
 
@@ -819,7 +851,7 @@ void initialise()
       	}
 
 	for(ci=0;ci<tN;++ci)
-	  {  fprintf(fptest2,"%d\t%d\t%d\n",ci,kbincnt[ci],kmagrid[ci]);
+	  {  fprintf(fptest2,"%d\t%d\t%d\n",ci,kbincnt[kmagrid[ci]],kmagrid[ci]);
 
 	     for(j=0;j<3;++j)
 		  {	
@@ -982,7 +1014,7 @@ int evolve(double aini, double astp)
     int l2,l1,r1,r2;
     
 
-    for(a=aini,lcntr=0;((a/ai)<=0.1*astp)&&(fail==1);++lcntr)
+    for(a=aini,lcntr=0;((a/ai)<=astp)&&(fail==1);++lcntr)
     { if(lcntr%jprint==0)
 	   printf("a  %lf %.10lf\n",a/ai,ommi);
           
@@ -1001,7 +1033,7 @@ int evolve(double aini, double astp)
 		 cal_dc_fr_particles();
       		 cal_spectrum(density_contrast,fppwspctrm_dc);
 		 cal_spectrum(phi,fppwspctrm_phi);
-		 
+		 write_fields();
 
 
 	  }
@@ -1030,9 +1062,15 @@ int evolve(double aini, double astp)
 			
 			pacc[i] = (p[ci].v[i]*a_t*a_t*a_t*vmagsqr*(-2.0*a*a_t*(phiavg+phiavg)-a*a*phi_aavg*a_t+a*a_t)
 				 +p[ci].v[i]*a_t*(fsg + phi_aavg*a_t -2.0*a_t/a + 2.0*phi_aavg*a_t -phi_savg[i])
-				 -phi_savg[i]/(a))/(a_t*a_t) - a_tt*p[ci].v[i]/(a_t*a_t);
+				 -phi_savg[i]/(a*a))/(a_t*a_t) - a_tt*p[ci].v[i]/(a_t*a_t);
 			tmpp[ci].x[i] = p[ci].x[i] + 0.5*da*p[ci].v[i];
 			tmpp[ci].v[i] = p[ci].v[i] + 0.5*da*pacc[i]; 
+			
+			  if(lcntr%jprint==0)
+			fprintf(fptest1,"%lf\t%d\t%d\t%.10lf\t%.10lf\n",a/ai,ci,i,
+						(p[ci].v[i]*a_t*a_t*a_t*vmagsqr*(-2.0*a*a_t*(phiavg+phiavg)-a*a*phi_aavg*a_t+a*a_t)
+				 +p[ci].v[i]*a_t*(fsg + phi_aavg*a_t -2.0*a_t/a + 2.0*phi_aavg*a_t -phi_savg[i]))/(-phi_savg[i]/(a)),p[ci].v[i]);
+
 
 		if((tmpp[ci].x[i]>=L[i])||(tmpp[ci].x[i]<0.0))
 			tmpp[ci].x[i] =  L[i]*(tmpp[ci].x[i]/L[i] - floor(tmpp[ci].x[i]/L[i]));
@@ -1058,7 +1096,7 @@ int evolve(double aini, double astp)
 
 		phiacc = (1.0/(a_t*a*a_t*a))*(-2.0*phi[ci]*a_t*a_t - 4.0*a*phi[ci]*a_tt 
 					      -a*a*tuldss[ci]/(3.0*Mpl*Mpl)) - 3.0*phi_a[ci]/a -phi_a[ci]/a - a_tt*phi_a[ci]/(a_t*a_t);
-		
+		 if(lcntr%jprint==0)
 		fprintf(fppsi,"%d\t%.20lf\t%.20lf\n",ci,tuldss[ci],phi[ci]);
 		
 		tmpphi[ci]  = phi[ci]+0.5*da*phi_a[ci];
@@ -1070,9 +1108,14 @@ int evolve(double aini, double astp)
 		
 		
 	  }
-		fprintf(fppsi,"\n\n\n");
 
-		fflush(fppsi);
+		 if(lcntr%jprint==0)
+	     {		fprintf(fppsi,"\n\n\n");  fprintf(fptest1,"\n\n\n");
+	    }
+
+
+
+		
 	  ak = a + 0.5*da;
  
 	    a_t = Hi*sqrt(ommi*ai*ai*ai/(ak)  + (1.0-ommi)*ak*ak ) ; 
@@ -1149,7 +1192,7 @@ int evolve(double aini, double astp)
 			
 			pacc[i] = (tmpp[ci].v[i]*a_t*a_t*a_t*vmagsqr*(-2.0*ak*a_t*(phiavg+phiavg)-ak*ak*phi_aavg*a_t+a*a_t)
 				 +tmpp[ci].v[i]*a_t*(fsg + phi_aavg*a_t -2.0*a_t/ak + 2.0*phi_aavg*a_t -phi_savg[i])
-				 -phi_savg[i]/(ak))/(a_t*a_t) - a_tt*tmpp[ci].v[i]/(a_t*a_t);
+				 -phi_savg[i]/(ak*ak))/(a_t*a_t) - a_tt*tmpp[ci].v[i]/(a_t*a_t);
 			p[ci].x[i] = p[ci].x[i] + da*p[ci].v[i];
 			p[ci].v[i] = p[ci].v[i] + da*pacc[i]; 
 
@@ -1158,7 +1201,7 @@ int evolve(double aini, double astp)
 		
 
 
-			anchor[i] =  (int) (tmpp[ci].x[i]/dx[i]); 
+			anchor[i] =  (int) (p[ci].x[i]/dx[i]); 
 
 
 			if(isnan(p[ci].x[i] +p[ci].v[i] ))
