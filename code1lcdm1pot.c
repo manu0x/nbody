@@ -21,7 +21,7 @@
 #include <time.h>
 #include "mt19937ar.c"
 
-#define  n 128
+#define  n 32
 
 #define tpie  2.0*M_PI
 
@@ -31,7 +31,7 @@
 double G   = 1.0;
 double c   = 1.0;
 double Mpl ;
-double lenfac = 1e-3;
+double lenfac = 1e3;
 double H0  ;
 double L[3];
 int tN;
@@ -87,7 +87,7 @@ int gridind[n*n*n][3];
 
 int nic[n*n*n][16];
 
-double  omdmb, omdeb, a, ak, a_t, a_tt, Vamp, ai, a0, da;
+double  omdmb, omdeb, a, ak, a_t, a_tt, Vamp, ai, a0, da,a_zels;
 double cpmc = 1.0;// (0.14/(0.68*0.68));
 int jprint,jprints;
 double H0, Hi;
@@ -191,7 +191,7 @@ void main()
 	initialise();
 	
 
-      //  i = evolve(ai,a0/ai);
+        i = evolve(a_zels,a0/ai);
 	
        //cal_dc_fr_particles();
       // cal_spectrum(density_contrast,fppwspctrm_dc,0);
@@ -729,6 +729,7 @@ void ini_displace_particle(double thres)
 	 }
 
 	ds = thres*dx[0]/maxv;
+	a_zels = ai+ds;
 	printf("\n(ds+ai)/ai is %lf  sqrd is %lf \n\n",1.0+(ds/ai),(1.0+(ds/ai))*(1.0+(ds/ai)));
 
 	for(ci=0;ci<tN;++ci)
@@ -1146,7 +1147,7 @@ void initialise()
 
 	printf("\nLengthscales:");
 	printf("\n	Grid Length is %.5lf MPc",dx[0]*lenfac*((double) n));
-	printf("\n	dx is %.10lf MPc",dx[0]*lenfac);
+	printf("\n	dx is %.10lf MPc\n",dx[0]*lenfac);
 
 	
 	
@@ -1354,7 +1355,7 @@ int evolve(double aini, double astp)
 			pacc[i] = (tmpp[ci].v[i]*a_t*a_t*a_t*vmagsqr*(-2.0*ak*a_t*(phiavg+phiavg)-ak*ak*phi_aavg*a_t+a*a_t)
 				 +tmpp[ci].v[i]*a_t*(fsg + phi_aavg*a_t -2.0*a_t/ak + 2.0*phi_aavg*a_t -phi_savg[i])
 				 -phi_savg[i]/(ak*ak))/(a_t*a_t) - a_tt*tmpp[ci].v[i]/(a_t*a_t);
-			p[ci].x[i] = p[ci].x[i] + da*p[ci].v[i];
+			p[ci].x[i] = p[ci].x[i] + da*tmpp[ci].v[i];
 			p[ci].v[i] = p[ci].v[i] + da*pacc[i]; 
 
 		if((p[ci].x[i]>=L[i])||(p[ci].x[i]<0.0))
