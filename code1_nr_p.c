@@ -114,6 +114,7 @@ void background();
 void initialise();
 double ini_power_spec(double);
 void ini_rand_field();
+void read_ini_rand_field();
 void ini_displace_particle(double);
 double mesh2particle(struct particle *,int,double *);
 void particle2mesh(struct particle * ,int ,double *,double );
@@ -196,6 +197,7 @@ void main()
 	ini_v2 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
 
 	slip_rhs = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
+	slip_rhs_ft = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
  	slip_cal  = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
 
 	slip_plan_f = fftw_plan_dft_3d(n,n,n, slip_rhs, slip_rhs_ft, FFTW_FORWARD, FFTW_ESTIMATE);
@@ -390,12 +392,34 @@ void cal_dc_fr_particles()
 
 
 
+void read_ini_rand_field()
+{
+
+	int cnt;
+
+	FILE *fpinirand = fopen("initial_rand_field.txt","r");
+
+	for(cnt=0;cnt<tN;++cnt)
+	{
+		fscanf(fpinirand,"%d\t%lf\t%lf\t%lf\t%lf\t%lf\n",
+					cnt,ini_density_contrast[cnt],ini_phi_potn[cnt],ini_vel0[cnt],ini_vel1[cnt],ini_vel2[cnt]);
+
+
+
+	}
+
+
+}
+
+
 
 void ini_rand_field()
 {	init_genrand(time(0));
 	int i,j,k,ief,jef,kef,cnt,rcnt,rk,ri,rj,maxcnt=0; 
 	double ksqr,muk,sigk;
 	double a1,a2,b1,b2,a,b;
+
+	FILE *fpinirand = fopen("initial_rand_field.txt","w");
 
 
 	
@@ -440,8 +464,8 @@ void ini_rand_field()
 			    muk = sigk/sqrt(2.0);
 		 	    a1 = genrand_res53();
  			    a2 = genrand_res53(); 
-			    b1 = genrand_res53();
- 			    b2 = genrand_res53();
+			   // b1 = genrand_res53();
+ 			  //  b2 = genrand_res53();
 			    a = (muk*(sqrt(-2.0*log(a1))*cos(2.0*M_PI*a2)));
 			    b = (muk*(sqrt(-2.0*log(a1))*cos(2.0*M_PI*a2)));
 				
@@ -682,6 +706,9 @@ void ini_rand_field()
 		ini_vel0[cnt] = ini_v0[cnt][0];
 		ini_vel1[cnt] = ini_v1[cnt][0];
 		ini_vel2[cnt] = ini_v2[cnt][0];  
+
+		fprintf(fpinirand,"%d\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
+					cnt,ini_density_contrast[cnt],ini_phi_potn[cnt],ini_vel0[cnt],ini_vel1[cnt],ini_vel2[cnt]);
 
 
 		
@@ -983,9 +1010,9 @@ void slip_fft_cal()
 		
 	}
 
-
+	
 	fftw_execute(slip_plan_f);
-
+	//printf("yha tk\n");
 
 	for(i=0;i<tN;++i)
 	{
@@ -1365,7 +1392,7 @@ void initialise()
 		{	//
 			grid[ci][j] = ((double)(xcntr[j]%n))*dx[j];
 
-			ind_grid[ci][j] = xcntr[j];
+			ind_grid[ci][j] = xcntr[j]%n;
 
 			p[ci].x[j] =  grid[ci][j];
 			
