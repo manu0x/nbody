@@ -973,13 +973,13 @@ void slip_fft_cal()
 		r2 = ((n+ind_grid[i][j]+2)%n)*((int)(pow(n,2-j)));
 		
 		
-		phi_s[j][i] = (tmpphi[l2]-8.0*tmpphi[l1]+8.0*tmpphi[r1]-tmpphi[r2])/(d1[j]);
-		f_s[j][i] = (tmpf[l2]-8.0*tmpf[l1]+8.0*tmpf[r1]-tmpf[r2])/(d1[j]); 
+		phi_s[j][i] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(d1[j]);
+		f_s[j][i] = (f[l2]-8.0*f[l1]+8.0*f[r1]-f[r2])/(d1[j]); 
 		
 		
 		
 		
-		LAPf[i] += (-tmpf[l2]+16.0*tmpf[l1]-30.0*tmpf[i]+16.0*tmpf[r1]-tmpf[r2])/(d2[j]); 
+		LAPf[i] += (-f[l2]+16.0*f[l1]-30.0*f[i]+16.0*f[r1]-f[r2])/(d2[j]); 
 		
 		
 		
@@ -996,8 +996,7 @@ void slip_fft_cal()
 
 
 		
-		tul00[i]+= 3.0*(Vvl + 0.5*tmpf_a[i]*tmpf_a[i]*(1.0-2.0*phi[i])) -fb00 ;
-		tuldss[i]+= 3.0*(Vvl - 0.5*tmpf_a[i]*tmpf_a[i]*(1.0-2.0*phi[i])) -fbdss ;
+		
 
 
 
@@ -1074,6 +1073,10 @@ void slip_fft_cal()
 		
 		
 		LAPslip[i] += (-slip_cal[l2][0]+16.0*slip_cal[l1][0]-30.0*slip_cal[i][0]+16.0*slip_cal[r1][0]-slip_cal[r2][0])/(n3sqrt*d2[j]); 
+
+		
+		tul00[i]+= (Vvl + 0.5*tmpf_a[i]*tmpf_a[i]*a_t*a_t*(1.0-2.0*(phi[i]-slip[i]))) -fb00 ;
+		tuldss[i]+= 3.0*((Vvl - 0.5*tmpf_a[i]*tmpf_a[i]*a_t*a_t*(1.0-2.0*(phi[i]-slip[i]))) -fbdss) ;
 
 		
 		
@@ -1161,8 +1164,8 @@ void cal_grd_tmunu()
 
 
 		
-		tul00[ci]+= 3.0*(Vvl + 0.5*f_a[ci]*f_a[ci]*(1.0-2.0*phi[ci])) -fb00 ;
-		tuldss[ci]+= 3.0*(Vvl - 0.5*f_a[ci]*f_a[ci]*(1.0-2.0*phi[ci])) -fbdss ;
+		tul00[ci]+=(Vvl + 0.5*f_a[ci]*f_a[ci]*a_t*a_t*(1.0-2.0*(phi[ci]-slip[ci])) -fb00) ;
+		tuldss[ci]+= 3.0*(Vvl - 0.5*f_a[ci]*f_a[ci]*a_t*a_t*(1.0-2.0*(phi[ci]-slip[ci])) -fbdss) ;
   		
 
 
@@ -1586,7 +1589,7 @@ int evolve(double aini, double astp)
     int i,j,lcntr,ci;
 
     double nd = (double) n, jd;  ///Watch out for local vs global for parallelization
-    double phiacc1,phiacc2,facc1,facc2,pacc1[3],pacc2[3],v,gamma,phiavg,phi_aavg,phi_savg[3],slip_savg[3],fsg;
+    double phiacc1[n*n*n],phiacc2[n*n*n],facc1[n*n*n],facc2[n*n*n],pacc1[n*n*n][3],pacc2[n*n*n][3],v,gamma,phiavg,phi_aavg,phi_savg[3],slip_savg[3],fsg;
     double vmagsqr;
     int anchor[3];
     double lplphi,lplf;
@@ -1660,7 +1663,7 @@ int evolve(double aini, double astp)
 		for(i=0;i<3;++i)
 		{
 			
-			pacc1[i] = p[ci].v[i]*(-2.0/a)
+			pacc1[ci][i] = p[ci].v[i]*(-2.0/a)
 				 -((phi_savg[i]-slip_savg[i])/(a*a))/(a_t*a_t) - a_tt*p[ci].v[i]/(a_t*a_t);
 			//fprintf(fptest1,"%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
 			//	p[ci].v[i]*a_t*a_t*a_t*vmagsqr*(-2.0*a*a_t*(phiavg+phiavg)-a*a*phi_aavg*a_t+a*a_t),
@@ -1671,8 +1674,8 @@ int evolve(double aini, double astp)
 				 -phi_savg[i]/(a*a))/(a_t*a_t) - a_tt*p[ci].v[i]/(a_t*a_t);
 		*/
 
-			p[ci].x[i] = p[ci].x[i] + da*p[ci].v[i] + 0.5*da*da*pacc1[ci];
-			tmpp[ci].v[i] = p[ci].v[i] + da*pacc1[i]; 
+			p[ci].x[i] = p[ci].x[i] + da*p[ci].v[i] + 0.5*da*da*pacc1[ci][i];
+			tmpp[ci].v[i] = p[ci].v[i] + da*pacc1[ci][i]; 
 			 
 
 			//if(isnan(tmpp[ci].v[i]))
@@ -1723,14 +1726,14 @@ int evolve(double aini, double astp)
 		//			      -a*a*tuldss[ci]/(6.0*Mpl*Mpl))  -phi[ci]/(a*a) 
 		//				- 3.0*phi_a[ci]/a -phi_a[ci]/a - a_tt*phi_a[ci]/(a_t*a_t);
 
-		phiacc1 = (a_t*a_t/(a*a) + 2.0*a_tt/a )*(slip[ci]-phi[ci])/(a_t*a_t) + (slip_a[ci]-4.0*phi_a[ci])/a + (1.0/3.0)*LAPslip[ci]/(a*a*a_t*a_t)
+		phiacc1[ci] = (a_t*a_t/(a*a) + 2.0*a_tt/a )*(slip[ci]-phi[ci])/(a_t*a_t) + (slip_a[ci]-4.0*phi_a[ci])/a + (1.0/3.0)*LAPslip[ci]/(a*a*a_t*a_t)
 				-tuldss[ci]/(6.0*Mpl*Mpl*a_t*a_t) -  - a_tt*phi_a[ci]/(a_t*a_t);
 
 
 		V_fvl = V_f(f[ci]);
 		Vvl = V(f[ci]);
 	
-		facc1 = ( V_fvl/(a_t*a_t) + 3.0*phi_a[ci]/a - 3.0*f_a[ci]*phi_a[ci] - 6.0*(phi[ci]-slip[ci])*f_a[ci]/a 
+		facc1[ci] = ( V_fvl/(a_t*a_t) + 3.0*phi_a[ci]/a - 3.0*f_a[ci]*phi_a[ci] - 6.0*(phi[ci]-slip[ci])*f_a[ci]/a 
 				- (phi_a[ci]-slip_a[ci])*f_a[ci] 
 				+(f_s[0][ci]*slip_s[0][ci]+f_s[1][ci]*slip_s[1][ci]+f_s[2][ci]*slip_s[2][ci] -LAPf[ci]*(1.0+2.0*phi[ci]))/(a*a*a_t*a_t) )
 			/(-1.0+2.0*phi[ci]) 
@@ -1743,11 +1746,11 @@ int evolve(double aini, double astp)
 			//		      -a*a*tuldss[ci]/(3.0*Mpl*Mpl)) - 3.0*phi_a[ci]/a -phi_a[ci]/a - a_tt*phi_a[ci]/(a_t*a_t);
 		
 		
-		phi[ci]  = phi[ci]+da*phi_a[ci]+0.5*da*da*phiacc1;
-		tmpphi_a[ci] = phi_a[ci]+da*phiacc1;
+		phi[ci]  = phi[ci]+da*phi_a[ci]+0.5*da*da*phiacc1[ci];
+		tmpphi_a[ci] = phi_a[ci]+da*phiacc1[ci];
 
-		f[ci]  = f[ci]+da*f_a[ci]+0.5*da*da*facc1;
-		tmpf_a[ci] = f_a[ci]+da*facc1;
+		f[ci]  = f[ci]+da*f_a[ci]+0.5*da*da*facc1[ci];
+		tmpf_a[ci] = f_a[ci]+da*facc1[ci];
 
 
 		
@@ -1845,7 +1848,7 @@ int evolve(double aini, double astp)
 		for(i=0;i<3;++i)
 		{
 			
-			pacc2[i] = tmpp[ci].v[i]*( -2.0/ak )
+			pacc2[ci][i] = tmpp[ci].v[i]*( -2.0/ak )
 				 -(phi_savg[i]/(ak*ak))/(a_t*a_t) - a_tt*tmpp[ci].v[i]/(a_t*a_t);
 			
 
@@ -1854,7 +1857,7 @@ int evolve(double aini, double astp)
 				 -phi_savg[i]/(ak*ak))/(a_t*a_t) - a_tt*tmpp[ci].v[i]/(a_t*a_t);
 		*/
 			
-			p[ci].v[i] = p[ci].v[i] + 0.5*da*(pacc1[i]+pacc2[i]); 
+			p[ci].v[i] = p[ci].v[i] + 0.5*da*(pacc1[ci][i]+pacc2[ci][i]); 
 
 		}			
 		
@@ -1863,7 +1866,7 @@ int evolve(double aini, double astp)
 			
 /////////////////////phi  acceleration calculation Final/////////////////////////////////////////////////////////////////////////////////
 		
-		phiacc2 = (a_t*a_t/(ak*ak) + 2.0*a_tt/ak )*(slip[ci]-phi[ci])/(a_t*a_t) + (slip_a[ci]-4.0*tmpphi_a[ci])/ak 
+		phiacc2[ci] = (a_t*a_t/(ak*ak) + 2.0*a_tt/ak )*(slip[ci]-phi[ci])/(a_t*a_t) + (slip_a[ci]-4.0*tmpphi_a[ci])/ak 
 				+ (1.0/3.0)*LAPslip[ci]/(ak*ak*a_t*a_t)
 				-tuldss[ci]/(6.0*Mpl*Mpl*a_t*a_t)   - a_tt*tmpphi_a[ci]/(a_t*a_t);
 
@@ -1871,7 +1874,7 @@ int evolve(double aini, double astp)
 		V_fvl = V_f(f[ci]);
 		Vvl = V(f[ci]);
 	
-		facc2 = ( V_fvl/(a_t*a_t) + 3.0*tmpphi_a[ci]/ak - 3.0*tmpf_a[ci]*tmpphi_a[ci] - 6.0*(phi[ci]-slip[ci])*tmpf_a[ci]/ak 
+		facc2[ci] = ( V_fvl/(a_t*a_t) + 3.0*tmpphi_a[ci]/ak - 3.0*tmpf_a[ci]*tmpphi_a[ci] - 6.0*(phi[ci]-slip[ci])*tmpf_a[ci]/ak 
 				- (tmpphi_a[ci]-slip_a[ci])*tmpf_a[ci] 
 				+(f_s[0][ci]*slip_s[0][ci]+f_s[1][ci]*slip_s[1][ci]+f_s[2][ci]*slip_s[2][ci] -LAPf[ci]*(1.0+2.0*phi[ci]))/(ak*ak*a_t*a_t) )
 			/(-1.0+2.0*phi[ci]) 
@@ -1886,8 +1889,8 @@ int evolve(double aini, double astp)
 
 		
 		
-		phi_a[ci] = phi_a[ci]+0.5*da*(phiacc1+phiacc2);
-		f_a[ci] = f_a[ci]+0.5*da*(facc1+facc2);
+		phi_a[ci] = phi_a[ci]+0.5*da*(phiacc1[ci]+phiacc2[ci]);
+		f_a[ci] = f_a[ci]+0.5*da*(facc1[ci]+facc2[ci]);
 
  		if(isnan(phi[ci]+phi_a[ci]))
 		fail=0;

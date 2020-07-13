@@ -1,3 +1,7 @@
+/*########### Valid only if second order terms are ignored everywhere and particles are non-relativistic*/
+/*########### For non-relativistic particles we do not calculate tmunu(or use particle2mesh) as tmunu for nr particles do not contribute to phiacc.*/
+
+#include <omp.h>
 #include <fftw3.h>
 #include <math.h>
 #include <stdio.h>
@@ -7,7 +11,7 @@
 #include <time.h>
 #include "mt19937ar.c"
 
-#define  n 32
+#define  n 128
 
 #define tpie  2.0*M_PI
 
@@ -23,11 +27,11 @@ double L[3];
 int tN;
 int fail =1;
 
-double *phi, *phi_a,  *f,*f_a,*tul00,*tuldss;
-double phi_s[3][n*n*n],f_s[3][n*n*n],LAPphi[n*n*n],LAPf[n*n*n];
+double *phi, *phi_a,  *f,*f_a,*tul00,*tuldss,fbdss,fb00;
+double phi_s[3][n*n*n],f_s[3][n*n*n],LAPf[n*n*n];
 double *tmpphi,  *tmpf,*tmpphi_a, *tmpf_a, *ini_vel0,*ini_vel1,*ini_vel2,m=1.0;
 double dx[3];
-double density_contrast[n*n*n],ini_density_contrast[n*n*n];
+double density_contrast[n*n*n],ini_density_contrast[n*n*n],ini_phi_potn[n*n*n];
 struct particle
 	{	
 		double x[3];
@@ -101,6 +105,7 @@ void background();
 
 void initialise();
 double ini_power_spec(double);
+void read_ini_rand_field();
 void ini_rand_field();
 void ini_displace_particle(double);
 double mesh2particle(struct particle *,int,double *);
@@ -120,13 +125,13 @@ void main()
 {       Mpl = 1.0/sqrt(8.0*3.142*G) ;
 	H0  = 22.04*(1e-5)*lenfac;
 
-        da = 0.000001;
+        da = 1e-5;
         jprint = (int) (0.001/da);
-	jprints = jprint;
+	jprints = jprint*10;
 	
 	tN=n*n*n;
         
-	printf("jprint %d tN %d  H0 %.10lf\n",jprint,tN,H0); 
+	printf("qqqjprint %d tN %d  H0 %.10lf\n",jprint,n,H0); 
 	//feenableexcept(FE_DIVBYZERO | FE_ItNVALID | FE_OVERFLOW);
 	//feenableexcept(FE_DIVBYZERO | FE_ItNVALID | FE_OVERFLOW);
 
@@ -156,10 +161,10 @@ void main()
 	tul00 = (double *) malloc(n*n*n*sizeof(double)); 
         tuldss = (double *) malloc(n*n*n*sizeof(double));
 
-	tmpphi = (double *) malloc(n*n*n*sizeof(double)); 
+	
         tmpphi_a = (double *) malloc(n*n*n*sizeof(double)); 
 	
-	tmpf = (double *) malloc(n*n*n*sizeof(double)); 
+	
         tmpf_a = (double *) malloc(n*n*n*sizeof(double)); 
  
 
@@ -188,11 +193,13 @@ void main()
 	background();
 	initialise();
 	
-
-       i = evolve(a_zels,a0/ai);
 	
-      // cal_dc_fr_particles();
-      // cal_spectrum(density_contrast,fppwspctrm_dc,0);
+       i = evolve(a_zels,a0/ai);
+	printf("ffEvvvolove\n");
+       cal_dc_fr_particles();
+       cal_spectrum(density_contrast,fppwspctrm_dc,0);
+		// cal_spectrum(phi,fppwspctrm_phi,0);
+       write_fields();
 	
 	if(i!=1)
 	printf("\nIt's gone...\n");
@@ -368,11 +375,35 @@ void cal_dc_fr_particles()
 
 
 
+
+void read_ini_rand_field()
+{
+
+	int cnt;
+
+	FILE *fpinirand = fopen("initial_rand_field.txt","r");
+
+	for(cnt=0;cnt<tN;++cnt)
+	{
+		fscanf(fpinirand,"%d\t%lf\t%lf\t%lf\t%lf\t%lf\n",
+					cnt,ini_density_contrast[cnt],ini_phi_potn[cnt],ini_vel0[cnt],ini_vel1[cnt],ini_vel2[cnt]);
+
+
+
+	}
+
+
+}
+
+
+
 void ini_rand_field()
 {	init_genrand(time(0));
 	int i,j,k,ief,jef,kef,cnt,rcnt,rk,ri,rj,maxcnt=0; 
 	double ksqr,muk,sigk;
 	double a1,a2,b1,b2,a,b;
+
+	FILE *fpinirand = fopen("initial_rand_field.txt","w");
 
 
 	
@@ -417,8 +448,8 @@ void ini_rand_field()
 			    muk = sigk/sqrt(2.0);
 		 	    a1 = genrand_res53();
  			    a2 = genrand_res53(); 
-			    b1 = genrand_res53();
- 			    b2 = genrand_res53();
+			   // b1 = genrand_res53();
+ 			  //  b2 = genrand_res53();
 			    a = (muk*(sqrt(-2.0*log(a1))*cos(2.0*M_PI*a2)));
 			    b = (muk*(sqrt(-2.0*log(a1))*cos(2.0*M_PI*a2)));
 				
@@ -654,10 +685,14 @@ void ini_rand_field()
 		ini_v2[cnt][0] = ini_v2[cnt][0]/sqrt(n*n*n);   ini_v2[cnt][1] = ini_v2[cnt][1]/sqrt(n*n*n);
 
 		ini_density_contrast[cnt] = ini_del[cnt][0];
+		ini_phi_potn[cnt] = ini_phi[cnt][0];
 
 		ini_vel0[cnt] = ini_v0[cnt][0];
 		ini_vel1[cnt] = ini_v1[cnt][0];
 		ini_vel2[cnt] = ini_v2[cnt][0];  
+
+		fprintf(fpinirand,"%d\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
+					cnt,ini_density_contrast[cnt],ini_phi_potn[cnt],ini_vel0[cnt],ini_vel1[cnt],ini_vel2[cnt]);
 
 
 		
@@ -669,6 +704,12 @@ void ini_rand_field()
 	 fftw_free(F_ini_v0);
 	 fftw_free(F_ini_v1);
 	 fftw_free(F_ini_v2);
+
+	 fftw_free(ini_phi);
+	 fftw_free(ini_del);
+	 fftw_free(ini_v0);
+	 fftw_free(ini_v1);
+	 fftw_free(ini_v2);
 
 
 	fftw_destroy_plan(ini_del_plan);
@@ -875,67 +916,20 @@ void particle2mesh(struct particle * pp,int p_id,double *meshphi,double ap)
 
 void cal_grd_tmunu(int k)
 {
-	int ci,l1,l2,r1,r2,j;
+	int ci,l1,l2,r1,r2,j,Vvl,V_fvl;
 
  	if(k==1)
 	{
-
+	#pragma omp parallel for private(j,l1,l2,r1,r2)
 	  for(ci=0;ci<tN;++ci)
 	   {
-	    particle2mesh(tmpp,ci,tmpphi,a);
+	  //  particle2mesh(tmpp,ci,tmpphi,a);
 
 	    
 	    
 
 	   
-	    LAPphi[ci] = 0.0;
-	    LAPf[ci] = 0.0;
-	  
-	    
-	     for(j=0;j<3;++j)
-	     {	 
-		
-
-
-		l1 = ((n+ind_grid[ci][j]-1)%n)*((int)(pow(n,2-j)));
-		l2 = ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j)));
-		r1 = ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j)));
-		r2 = ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j)));
-		
-		
-		phi_s[j][ci] = (tmpphi[l2]-8.0*tmpphi[l1]+8.0*tmpphi[r1]-tmpphi[r2])/(12.0*dx[j]);
-		f_s[j][ci] = (tmpf[l2]-8.0*tmpf[l1]+8.0*tmpf[r1]-tmpf[r2])/(12.0*dx[j]); 
-		
-		
-		LAPphi[ci] += (-tmpphi[l2]+16.0*tmpphi[l1]-30.0*tmpphi[ci]+16.0*tmpphi[r1]-tmpphi[r2])/(12.0*dx[j]*dx[j]);
-		LAPf[ci] += (-tmpf[l2]+16.0*tmpf[l1]-30.0*tmpf[ci]+16.0*tmpf[r1]-tmpf[r2])/(12.0*dx[j]*dx[j]); 
-
-		
-		
-
-		
-		
-	     }
-  		
-
-
-	  }
-	}
-
-
-
-
-	else
-	{
-
-	  for(ci=0;ci<tN;++ci)
-	   {
-	    particle2mesh(p,ci,phi,a);
-
-	    
-
-	   
-	    LAPphi[ci] = 0.0;
+	   // LAPphi[ci] = 0.0;
 	    LAPf[ci] = 0.0;
 	  
 	    
@@ -951,10 +945,10 @@ void cal_grd_tmunu(int k)
 		
 		
 		phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(12.0*dx[j]);
-		f_s[j][ci] = (f[l2]-8.0*f[l1]+8.0*f[r1]-f[r2])/(12.0*dx[j]); 
+		//f_s[j][ci] = (tmpf[l2]-8.0*tmpf[l1]+8.0*tmpf[r1]-tmpf[r2])/(12.0*dx[j]); 
 		
 		
-		LAPphi[ci] += (-phi[l2]+16.0*phi[l1]-30.0*phi[ci]+16.0*phi[r1]-phi[r2])/(12.0*dx[j]*dx[j]);
+		//LAPphi[ci] += (-tmpphi[l2]+16.0*tmpphi[l1]-30.0*tmpphi[ci]+16.0*tmpphi[r1]-tmpphi[r2])/(12.0*dx[j]*dx[j]);
 		LAPf[ci] += (-f[l2]+16.0*f[l1]-30.0*f[ci]+16.0*f[r1]-f[r2])/(12.0*dx[j]*dx[j]); 
 
 		
@@ -963,6 +957,72 @@ void cal_grd_tmunu(int k)
 		
 		
 	     }
+  		
+
+		
+		V_fvl = V_f(f[ci]);
+		Vvl = V(f[ci]);
+
+
+		
+		tul00[ci]+= (Vvl + 0.5*tmpf_a[ci]*tmpf_a[ci]*a_t*a_t*(1.0-2.0*phi[ci])) -fb00 ;
+		tuldss[ci]+= 3.0*((Vvl - 0.5*tmpf_a[ci]*tmpf_a[ci]*a_t*a_t*(1.0-2.0*phi[ci])) -fbdss) ;
+
+
+
+	  }
+	}
+
+
+
+
+	else
+	{
+	 #pragma omp parallel for private(j,l1,l2,r1,r2)
+	  for(ci=0;ci<tN;++ci)
+	   {
+	   //particle2mesh(p,ci,phi,a);
+
+	    
+
+	   
+	    //LAPphi[ci] = 0.0;
+	    LAPf[ci] = 0.0;
+	  
+	    
+	     for(j=0;j<3;++j)
+	     {	 
+		
+
+
+		l1 = ((n+ind_grid[ci][j]-1)%n)*((int)(pow(n,2-j)));
+		l2 = ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j)));
+		r1 = ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j)));
+		r2 = ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j)));
+		
+		
+		phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(12.0*dx[j]);
+		//f_s[j][ci] = (f[l2]-8.0*f[l1]+8.0*f[r1]-f[r2])/(12.0*dx[j]); 
+		
+		
+		//LAPphi[ci] += (-phi[l2]+16.0*phi[l1]-30.0*phi[ci]+16.0*phi[r1]-phi[r2])/(12.0*dx[j]*dx[j]);
+		LAPf[ci] += (-f[l2]+16.0*f[l1]-30.0*f[ci]+16.0*f[r1]-f[r2])/(12.0*dx[j]*dx[j]); 
+
+		
+		
+
+		
+		
+	     }
+
+
+		V_fvl = V_f(f[ci]);
+		Vvl = V(f[ci]);
+
+
+		
+		tul00[ci]+= (Vvl + 0.5*f_a[ci]*f_a[ci]*a_t*a_t*(1.0-2.0*phi[ci])) -fb00 ;
+		tuldss[ci]+= 3.0*((Vvl - 0.5*f_a[ci]*f_a[ci]*a_t*a_t*(1.0-2.0*phi[ci])) -fbdss) ;
   		
 
 
@@ -1135,7 +1195,7 @@ void write_fields()
 	{
 
 
-		fprintf(fpfields,"%d\t%lf\t%.20lf\t%.20lf\n",i,a/ai,density_contrast[i],phi[i]);
+		fprintf(fpfields,"%d\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",i,a/ai,density_contrast[i],phi[i],p[i].x[0],p[i].x[1],p[i].x[2]);
 
 
 	}
@@ -1192,7 +1252,7 @@ void initialise()
 		{	//
 			grid[ci][j] = ((double)(xcntr[j]%n))*dx[j];
 
-			ind_grid[ci][j] = xcntr[j];
+			ind_grid[ci][j] = xcntr[j]%n;
 
 			p[ci].x[j] =  grid[ci][j];
 			
@@ -1255,12 +1315,17 @@ void initialise()
 		
 			
 
-		 phi[ci] = ini_phi[ci][0];
+		 
+		 phi[ci] = ini_phi_potn[ci];
 		 phi_a[ci] = 0.0;
+		 
+		 
 
 		
 		
       	}
+
+
 
 	for(ci=0;ci<tN;++ci)
 	  {  
@@ -1393,39 +1458,39 @@ void initialise()
 
 int evolve(double aini, double astp)
 {
-    
+    printf("Evvvolove\n");
 
 
     double ommi = omdmb;
-    double facb1,facb2,Vvl,V_fvl,fb_ak,fbk,omfb;
+    double facb1,facb2,Vvl,V_fvl,fb_ak,fbk,omfb,Vvlb,V_fvlb;
     double w;
 
     int i,j,lcntr,ci;
-
-    double nd = (double) n, jd;  ///Watch out for local vs global for parallelization
-    double phiacc1,phiacc2,facc1,facc2,pacc1[3],pacc2[3],v,gamma,phiavg,phi_aavg,phi_savg[3],fsg;
+     
+     ///Watch out for local vs global for parallelization
+    double phiacc1[n*n*n],phiacc2[n*n*n],facc1[n*n*n],facc2[n*n*n],pacc1[n*n*n][3],pacc2[n*n*n][3],v,gamma,phiavg,phi_aavg,phi_savg[3],fsg;
     double vmagsqr;
     int anchor[3];
-    double lplphi,lplf;
+ 
 
 
     Vamp = Vamp*Hi*Hi; 
   
-    printf("Evvvolove\n");
+   
 
   for(a=aini,lcntr=0;((a/ai)<=astp)&&(fail==1);++lcntr)
     { //if(lcntr%jprint==0)
 	   
           
       
-      Vvl = V(fb);
-      V_fvl =  V_f(fb);
+      Vvlb = V(fb);
+      V_fvlb =  V_f(fb);
 
-      a_t = sqrt((Hi*Hi*ommi*ai*ai*ai/a  + (1.0/(Mpl*Mpl))*a*a*Vvl/(3.0*c)) / ( 1.0 - (1.0/(Mpl*Mpl))*a*a*fb_a*fb_a/(6.0*c*c*c))) ;
-      a_tt = -0.5*ommi*Hi*Hi*ai*ai*ai/(a*a) - (1.0/(Mpl*Mpl*c))*a*(fb_a*fb_a*a_t*a_t - Vvl)/3.0;
+      a_t = sqrt((Hi*Hi*ommi*ai*ai*ai/a  + (1.0/(Mpl*Mpl))*a*a*Vvlb/(3.0*c)) / ( 1.0 - (1.0/(Mpl*Mpl))*a*a*fb_a*fb_a/(6.0*c*c*c))) ;
+      a_tt = -0.5*ommi*Hi*Hi*ai*ai*ai/(a*a) - (1.0/(Mpl*Mpl*c))*a*(fb_a*fb_a*a_t*a_t - Vvlb)/3.0;
 
 
-      facb1 = -V_fvl*c*c/(a_t*a_t) - 3.0*fb_a/a - a_tt*fb_a/(a_t*a_t);
+      facb1 = -V_fvlb*c*c/(a_t*a_t) - 3.0*fb_a/a - a_tt*fb_a/(a_t*a_t);
 
 	
 
@@ -1434,7 +1499,7 @@ int evolve(double aini, double astp)
          
 	  if(lcntr%jprint==0)
 	  { 
-		 omfb = (1.0/(3.0*c*c*c*Mpl*Mpl))*(fb_a*fb_a*a_t*a_t/(2.0*c*c) + Vvl);
+		 omfb = (1.0/(3.0*c*c*c*Mpl*Mpl))*(fb_a*fb_a*a_t*a_t/(2.0*c*c) + Vvlb);
 
 		fprintf(fpback,"%lf\t%.10lf\t%.10lf\n",a/ai,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t),omfb*a*a/(a_t*a_t));
 		printf("a  %lf %.10lf  %.10lf\n",a,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t),omfb);
@@ -1444,28 +1509,28 @@ int evolve(double aini, double astp)
 
 	
 	if((lcntr%jprints==0)&&(a!=aini))
-	   {
+	   { printf("printing..\n");
 
-		// cal_dc_fr_particles();
-      		// cal_spectrum(density_contrast,fppwspctrm_dc,0);
+		 cal_dc_fr_particles();
+      		 cal_spectrum(density_contrast,fppwspctrm_dc,0);
 		// cal_spectrum(phi,fppwspctrm_phi,0);
-		 //write_fields();
+		 write_fields();
 
 
 	  }
 
 /////////////////////////////////particle force calculation*****Step 1////////////////////////////////////////////////		 
-
-	 for(ci=0;ci>tN;++ci)
+	#pragma omp parallelfor private(v,gamma,phiavg,phi_aavg,phi_savg,fsg,anchor,i,vmagsqr)
+	 for(ci=0;ci<tN;++ci)
 	  {
-			vmagsqr = 0.0;	
+			//vmagsqr = 0.0;	
 
 	
-		phiavg = mesh2particle(p,ci,phi);
+		//phiavg = mesh2particle(p,ci,phi);
 		//phiavg = mesh2particle(p,ci,phi);
 		//phi_aavg = mesh2particle(p,ci,phi_a);
 		//phi_aavg = mesh2particle(p,ci,phi_a);
-		fsg = 0.0;
+		//fsg = 0.0;
 		for(i=0;i<3;++i)
 		{	//phi_savg[i] = mesh2particle(p,ci,&phi_s[i][0]);
 			phi_savg[i] = mesh2particle(p,ci,&phi_s[i][0]);
@@ -1477,7 +1542,7 @@ int evolve(double aini, double astp)
 		for(i=0;i<3;++i)
 		{
 			
-			pacc1[i] = p[ci].v[i]*(-2.0/a)
+			pacc1[ci][i] = p[ci].v[i]*(-2.0/a)
 				 -(phi_savg[i]/(a*a))/(a_t*a_t) - a_tt*p[ci].v[i]/(a_t*a_t);
 			//fprintf(fptest1,"%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
 			//	p[ci].v[i]*a_t*a_t*a_t*vmagsqr*(-2.0*a*a_t*(phiavg+phiavg)-a*a*phi_aavg*a_t+a*a_t),
@@ -1488,8 +1553,8 @@ int evolve(double aini, double astp)
 				 -phi_savg[i]/(a*a))/(a_t*a_t) - a_tt*p[ci].v[i]/(a_t*a_t);
 		*/
 
-			p[ci].x[i] = p[ci].x[i] + da*p[ci].v[i] + 0.5*da*da*pacc1[ci];
-			tmpp[ci].v[i] = p[ci].v[i] + da*pacc1[i]; 
+			p[ci].x[i] = p[ci].x[i] + da*p[ci].v[i] + 0.5*da*da*pacc1[ci][i];
+			tmpp[ci].v[i] = p[ci].v[i] + da*pacc1[ci][i]; 
 			 
 
 			//if(isnan(tmpp[ci].v[i]))
@@ -1536,9 +1601,15 @@ int evolve(double aini, double astp)
 			tmpp[ci].cubeind[7] = p[ci].cubeind[7] ;
 /////////////////////phi acceleration calculation Step 1/////////////////////////////////////////////////////////////////////////////////
 
-		phiacc1 = (1.0/(a_t*a*a_t*a))*(- 2.0*a*phi[ci]*a_tt 
+		phiacc1[ci] = (1.0/(a_t*a*a_t*a))*(- 2.0*a*phi[ci]*a_tt 
 					      -a*a*tuldss[ci]/(6.0*Mpl*Mpl))  -phi[ci]/(a*a) 
 						- 3.0*phi_a[ci]/a -phi_a[ci]/a - a_tt*phi_a[ci]/(a_t*a_t);
+
+		V_fvl = V_f(f[ci]);
+		Vvl = V(f[ci]);
+	
+		facc1[ci] = ( V_fvl/(a_t*a_t) + 3.0*phi_a[ci]/a - 3.0*f_a[ci]*phi_a[ci] - 6.0*phi[ci]*f_a[ci]/a 
+				- phi_a[ci]*f_a[ci] -LAPf[ci]*(1.0+2.0*phi[ci])/(a*a*a_t*a_t) )/(-1.0+2.0*phi[ci])-a_tt*f_a[ci]/(a_t*a_t); 
 
 		
 		
@@ -1547,15 +1618,17 @@ int evolve(double aini, double astp)
 			//		      -a*a*tuldss[ci]/(3.0*Mpl*Mpl)) - 3.0*phi_a[ci]/a -phi_a[ci]/a - a_tt*phi_a[ci]/(a_t*a_t);
 		
 		
-		phi[ci]  = phi[ci]+da*phi_a[ci]+0.5*da*da*phiacc1;
-		tmpphi_a[ci] = phi_a[ci]+da*phiacc1;
+		phi[ci]  = phi[ci]+da*phi_a[ci]+0.5*da*da*phiacc1[ci];
+		tmpphi_a[ci] = phi_a[ci]+da*phiacc1[ci];
+
+		f[ci]  = f[ci]+da*f_a[ci]+0.5*da*da*facc1[ci];
+		tmpf_a[ci] = f_a[ci]+da*facc1[ci];
 
 
 		
 
-
 		
-		tul00[ci] = 0.0;
+		tul00[ci] = 0.0 ;
 		tuldss[ci] = 0.0;
 		
 		
@@ -1563,26 +1636,28 @@ int evolve(double aini, double astp)
 
 		//fprintf(fptest1,"\n\n\n");
 		
-	 if(lcntr%jprint==0)
-	     {		fprintf(fpphi,"\n\n\n");  
-	    }
+	 
 
 
 
 		
-	  a = a + da;
+	  ak = a + da;
 
-	  Vvl = V(fb);
-          V_fvl =  V_f(fb);
+	  Vvlb = V(fb);
+          V_fvlb =  V_f(fb);
 
-	  a_t = sqrt((ommi*Hi*Hi*ai*ai*ai/ak  + (1.0/(Mpl*Mpl))*ak*ak*Vvl/(3.0*c)) / ( 1.0 - (1.0/(Mpl*Mpl))*ak*ak*fb_ak*fb_ak/(6.0*c*c*c))) ;
-          a_tt = -0.5*ommi*Hi*Hi*ai*ai*ai/(ak*ak) - (1.0/(Mpl*Mpl*c))*ak*(fb_ak*fb_ak*a_t*a_t - Vvl)/3.0;
+	  a_t = sqrt((ommi*Hi*Hi*ai*ai*ai/ak  + (1.0/(Mpl*Mpl))*ak*ak*Vvlb/(3.0*c)) / ( 1.0 - (1.0/(Mpl*Mpl))*ak*ak*fb_ak*fb_ak/(6.0*c*c*c))) ;
+          a_tt = -0.5*ommi*Hi*Hi*ai*ai*ai/(ak*ak) - (1.0/(Mpl*Mpl*c))*ak*(fb_ak*fb_ak*a_t*a_t - Vvlb)/3.0;
+
+
+	  fbdss =  (-0.5*fb_ak*fb_ak*a_t*a_t + Vvlb) ;
+	  fb00 =  (0.5*fb_ak*fb_ak*a_t*a_t + Vvlb) ;
  
 	   
 /////////////////////Intermediate Tul calculations and psi construction//////////////////////////////////////////
 
 
-	//cal_grd_tmunu(1);
+	cal_grd_tmunu(1);
 	
 	
 
@@ -1600,7 +1675,7 @@ int evolve(double aini, double astp)
 	
 
 
-       facb2 = -V_fvl*c*c/(a_t*a_t) - 3.0*fb_ak/ak - a_tt*fb_ak/(a_t*a_t);
+       facb2 = -V_fvlb*c*c/(a_t*a_t) - 3.0*fb_ak/ak - a_tt*fb_ak/(a_t*a_t);
 
 	
 
@@ -1621,17 +1696,17 @@ int evolve(double aini, double astp)
 	  
 
 	 
-
-	 for(ci=0;ci>tN;++ci)
+	#pragma omp parallelfor private(v,gamma,phiavg,phi_aavg,phi_savg,fsg,anchor,i,vmagsqr)
+	 for(ci=0;ci<tN;++ci)
 	  {
-			vmagsqr = 0.0;	
+			//vmagsqr = 0.0;	
 
 		
-		phiavg = mesh2particle(p,ci,phi);
+		//phiavg = mesh2particle(p,ci,phi);
 		
-		phi_aavg = mesh2particle(p,ci,tmpphi_a);
+		//phi_aavg = mesh2particle(p,ci,tmpphi_a);
 		
-		fsg = 0.0;
+		//fsg = 0.0;
 		for(i=0;i<3;++i)
 		{	//phi_savg[i] = mesh2particle(tmpp,ci,&phi_s[i][0]);
 			phi_savg[i] = mesh2particle(p,ci,&phi_s[i][0]);
@@ -1639,11 +1714,11 @@ int evolve(double aini, double astp)
 			//vmagsqr+=tmpp[ci].v[i]*tmpp[ci].v[i];
 
 		}
-			gamma = 1.0/sqrt(1.0-ak*ak*a_t*a_t*vmagsqr);
+			//gamma = 1.0/sqrt(1.0-ak*ak*a_t*a_t*vmagsqr);
 		for(i=0;i<3;++i)
 		{
 			
-			pacc2[i] = tmpp[ci].v[i]*( -2.0/ak )
+			pacc2[ci][i] = tmpp[ci].v[i]*( -2.0/ak )
 				 -(phi_savg[i]/(ak*ak))/(a_t*a_t) - a_tt*tmpp[ci].v[i]/(a_t*a_t);
 			
 
@@ -1652,7 +1727,7 @@ int evolve(double aini, double astp)
 				 -phi_savg[i]/(ak*ak))/(a_t*a_t) - a_tt*tmpp[ci].v[i]/(a_t*a_t);
 		*/
 			
-			p[ci].v[i] = p[ci].v[i] + 0.5*da*(pacc1[i]+pacc2[i]); 
+			p[ci].v[i] = p[ci].v[i] + 0.5*da*(pacc1[ci][i]+pacc2[ci][i]); 
 
 		}			
 		
@@ -1661,9 +1736,18 @@ int evolve(double aini, double astp)
 			
 /////////////////////phi  acceleration calculation Final/////////////////////////////////////////////////////////////////////////////////
 		
-		phiacc2 = (1.0/(a_t*ak*a_t*ak))*(- 2.0*ak*phi[ci]*a_tt 
+		phiacc2[ci] = (1.0/(a_t*ak*a_t*ak))*(- 2.0*ak*phi[ci]*a_tt 
 					      -ak*ak*tuldss[ci]/(6.0*Mpl*Mpl))  -phi[ci]/(ak*ak) 
 						- 3.0*tmpphi_a[ci]/ak -tmpphi_a[ci]/ak - a_tt*tmpphi_a[ci]/(a_t*a_t);
+
+
+		V_fvl = V_f(f[ci]);
+		Vvl = V(f[ci]);
+	
+		facc2[ci] = ( V_fvl/(a_t*a_t) + 3.0*tmpphi_a[ci]/a - 3.0*tmpf_a[ci]*phi_a[ci] - 
+				6.0*phi[ci]*tmpf_a[ci]/a - tmpphi_a[ci]*tmpf_a[ci] 
+				-LAPf[ci]*(1.0+2.0*phi[ci])/(a*a*a_t*a_t) )/(-1.0+2.0*phi[ci])-a_tt*tmpf_a[ci]/(a_t*a_t); 
+
 
 		
 		//phiacc = (1.0/(2.0*a_t*ak*a_t*ak))*(-2.0*tmpphi[ci]*a_t*a_t - 4.0*ak*tmpphi[ci]*a_tt 
@@ -1672,29 +1756,32 @@ int evolve(double aini, double astp)
 
 		
 		
-		phi_a[ci] = phi_a[ci]+0.5*da*(phiacc1+phiacc2);
+		phi_a[ci] = phi_a[ci]+0.5*da*(phiacc1[ci]+phiacc2[ci]);
+		f_a[ci] = f_a[ci]+0.5*da*(facc1[ci]+facc2[ci]);
 
  		if(isnan(phi[ci]+phi_a[ci]))
 		fail=0;
 		
-		tul00[ci] = 0.0;
+		tul00[ci] = 0.0 ;
 		tuldss[ci] = 0.0;
-
 
 
 	}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////Final Tul and phi recosntruction/////////////////////////////////////////////////////////////
 		
-      a_t = sqrt((Hi*Hi*ommi*ai*ai*ai/a  + (1.0/(Mpl*Mpl))*a*a*Vvl/(3.0*c)) / ( 1.0 - (1.0/(Mpl*Mpl))*a*a*fb_a*fb_a/(6.0*c*c*c))) ;
-      a_tt = -0.5*ommi*Hi*Hi*ai*ai*ai/(a*a) - (1.0/(Mpl*Mpl*c))*a*(fb_a*fb_a*a_t*a_t - Vvl)/3.0;
+      a_t = sqrt((Hi*Hi*ommi*ai*ai*ai/a  + (1.0/(Mpl*Mpl))*a*a*Vvlb/(3.0*c)) / ( 1.0 - (1.0/(Mpl*Mpl))*a*a*fb_a*fb_a/(6.0*c*c*c))) ;
+      a_tt = -0.5*ommi*Hi*Hi*ai*ai*ai/(a*a) - (1.0/(Mpl*Mpl*c))*a*(fb_a*fb_a*a_t*a_t - Vvlb)/3.0;
+
+	fbdss =  (-0.5*fb_a*fb_a*a_t*a_t + Vvlb) ;
+	fb00 =  (0.5*fb_a*fb_a*a_t*a_t + Vvlb) ;
 
 	
 
 
 	
 
-	//cal_grd_tmunu(0);
+	cal_grd_tmunu(0);
 	
 		
 	
@@ -1704,7 +1791,7 @@ int evolve(double aini, double astp)
 	
 	
 
-   
+      a = a+da;
 
  //   printf("evolve w  %.10lf  Hi %.10lf  %.10lf  %.10lf\n",a_t,a,a0);
 
