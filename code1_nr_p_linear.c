@@ -127,13 +127,16 @@ void main()
 
         da = 1e-5;
         jprint = (int) (0.001/da);
-	jprints = jprint*10;
+	jprints = jprint*100;
 	
 	tN=n*n*n;
         
 	printf("qqqjprint %d tN %d  H0 %.10lf\n",jprint,n,H0); 
 	//feenableexcept(FE_DIVBYZERO | FE_ItNVALID | FE_OVERFLOW);
 	//feenableexcept(FE_DIVBYZERO | FE_ItNVALID | FE_OVERFLOW);
+
+	fftw_init_threads();
+	fftw_plan_with_nthreads(4);
 
 	
 	
@@ -194,7 +197,7 @@ void main()
 	initialise();
 	
 	
-       i = evolve(a_zels,a0/ai);
+       //i = evolve(a_zels,a0/ai);
 	printf("ffEvvvolove\n");
        cal_dc_fr_particles();
        cal_spectrum(density_contrast,fppwspctrm_dc,0);
@@ -235,7 +238,7 @@ void cal_spectrum(double *spcmesh,FILE *fspwrite,int isini)
 		pwspctrm[i] = 0.0;
 	}
 
-
+	fftw_plan_with_nthreads(4);
 	spec_plan = fftw_plan_dft_3d(n,n,n, dens_cntrst, Fdens_cntrst, FFTW_FORWARD, FFTW_ESTIMATE);
 	fftw_execute(spec_plan);
 	fftw_free(dens_cntrst);
@@ -660,7 +663,7 @@ void ini_rand_field()
 
 
 
-
+	fftw_plan_with_nthreads(4);
 	ini_del_plan = fftw_plan_dft_3d(n,n,n, F_ini_del, ini_del, FFTW_BACKWARD, FFTW_ESTIMATE);
 	ini_v0_plan = fftw_plan_dft_3d(n,n,n, F_ini_v0, ini_v0, FFTW_BACKWARD, FFTW_ESTIMATE);
 	ini_v1_plan = fftw_plan_dft_3d(n,n,n, F_ini_v1, ini_v1, FFTW_BACKWARD, FFTW_ESTIMATE);
@@ -1520,7 +1523,7 @@ int evolve(double aini, double astp)
 	  }
 
 /////////////////////////////////particle force calculation*****Step 1////////////////////////////////////////////////		 
-	#pragma omp parallelfor private(v,gamma,phiavg,phi_aavg,phi_savg,fsg,anchor,i,vmagsqr)
+	#pragma omp parallel for private(v,gamma,phiavg,phi_aavg,phi_savg,fsg,anchor,i,vmagsqr)
 	 for(ci=0;ci<tN;++ci)
 	  {
 			//vmagsqr = 0.0;	
@@ -1696,7 +1699,7 @@ int evolve(double aini, double astp)
 	  
 
 	 
-	#pragma omp parallelfor private(v,gamma,phiavg,phi_aavg,phi_savg,fsg,anchor,i,vmagsqr)
+	#pragma omp parallel for private(v,gamma,phiavg,phi_aavg,phi_savg,fsg,anchor,i,vmagsqr)
 	 for(ci=0;ci<tN;++ci)
 	  {
 			//vmagsqr = 0.0;	
