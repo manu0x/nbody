@@ -1365,7 +1365,11 @@ void initialise()
 
   
 	ini_displace_particle(0.1);
+	
 	background();
+	
+	a = ai;
+	
 
 	fb = fb_zeldo;
 	fb_a = fb_a_zeldo;
@@ -1428,15 +1432,18 @@ void initialise()
 	}
 
 
-	cal_grd_tmunu(0);
+	
 	           
           
 	free(ini_vel0); free(ini_vel1); free(ini_vel2);
+	
 
 	cal_dc_fr_particles();
 	
 	cal_spectrum(ini_density_contrast,fppwspctrm_dc,1);
 	a = a_zels;
+
+	cal_grd_tmunu(0);
 
 	cal_spectrum(density_contrast,fppwspctrm_dc,0);
 
