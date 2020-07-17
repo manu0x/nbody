@@ -7,7 +7,7 @@
 #include <time.h>
 #include "mt19937ar.c"
 
-#define  n 32
+#define  n 128
 
 #define tpie  2.0*M_PI
 
@@ -18,14 +18,16 @@ double G   = 1.0;
 double c   = 1.0;
 double Mpl ;
 double lenfac = 1e3;
-double H0  ;
+double Hb0  ;
 double L[3];
 int tN;
 int fail =1;
 
+clock_t t_start,t_end;
+
 double n3sqrt;
 double *phi, *phi_a,  *f,*f_a,*slip,*slip_a,*tul00,*tuldss,fbdss,fb00;
-double phi_s[3][n*n*n],f_s[3][n*n*n],slip_s[3][n*n*n],LAPslip[n*n*n],LAPf[n*n*n],tmpslip[n*n*n];
+double phi_s[3][n*n*n],f_s[3][n*n*n],slip_s[3][n*n*n],LAPslip[n*n*n],LAPf[n*n*n],tmpslip2[n*n*n],tmpslip1[n*n*n];
 double *tmpphi,  *tmpf,*tmpphi_a, *tmpf_a, *ini_vel0,*ini_vel1,*ini_vel2,m=1.0;
 double dx[3];
 double density_contrast[n*n*n],ini_density_contrast[n*n*n],ini_phi_potn[n*n*n];
@@ -93,7 +95,7 @@ double  omdmb, omdeb, a, ak, a_t, a_tt, Vamp, ai, a0, da, ak, fb, fb_a,a_zels;
 double fb_zeldo,fb_a_zeldo;
 double cpmc = (0.14/(0.68*0.68));
 int jprint,jprints;
-double H0, Hi;
+double Hb0, Hi;
 
 FILE *fpback;
 FILE *fptest1;
@@ -130,20 +132,25 @@ void cal_grd_tmunu();
 
 
 void main()
-{       Mpl = 1.0/sqrt(8.0*3.142*G) ;
-	H0  = 22.04*(1e-5)*lenfac;
+{   t_start = clock();
 
-        da = 0.000001;
+    Mpl = 1.0/sqrt(8.0*3.142*G) ;
+	Hb0  = 22.04*(1e-5)*lenfac;
+
+        da = 1e-5;
         jprint = (int) (0.001/da);
-	jprints = jprint;
+	jprints = 100*jprint;
 	
 	tN=n*n*n;
 
 	n3sqrt = sqrt((double) tN);
         
-	printf("jprint %d tN %d  H0 %.10lf\n",jprint,tN,H0); 
+	printf("jprint %d tN %d  Hb0 %.10lf\n",jprint,tN,Hb0); 
 	//feenableexcept(FE_DIVBYZERO | FE_ItNVALID | FE_OVERFLOW);
 	//feenableexcept(FE_DIVBYZERO | FE_ItNVALID | FE_OVERFLOW);
+
+	fftw_init_threads();
+	fftw_plan_with_nthreads(64);
 
 	
 	
@@ -216,13 +223,16 @@ void main()
 
        i = evolve(a_zels,a0/ai);
 	
-      // cal_dc_fr_particles();
-      // cal_spectrum(density_contrast,fppwspctrm_dc,0);
+       cal_dc_fr_particles();
+       cal_spectrum(density_contrast,fppwspctrm_dc,0);
+	write_fields();
 	
 	if(i!=1)
 	printf("\nIt's gone...\n");
 
+	t_end = clock();
 
+	printf("\nTotal consumed time is %lf\n",(double) ((t_end-t_start)/CLOCKS_PER_SEC));
 
 
 }
@@ -395,14 +405,14 @@ void cal_dc_fr_particles()
 void read_ini_rand_field()
 {
 
-	int cnt;
+	int cnt,i;
 
 	FILE *fpinirand = fopen("initial_rand_field.txt","r");
 
 	for(cnt=0;cnt<tN;++cnt)
 	{
 		fscanf(fpinirand,"%d\t%lf\t%lf\t%lf\t%lf\t%lf\n",
-					cnt,ini_density_contrast[cnt],ini_phi_potn[cnt],ini_vel0[cnt],ini_vel1[cnt],ini_vel2[cnt]);
+					&i,&ini_density_contrast[cnt],&ini_phi_potn[cnt],&ini_vel0[cnt],&ini_vel1[cnt],&ini_vel2[cnt]);
 
 
 
@@ -423,7 +433,7 @@ void ini_rand_field()
 
 
 	
-	double zdvfac = -(2.0/3.0)*a_t/(cpmc*H0*H0);
+	double zdvfac = -(2.0/3.0)*a_t/(cpmc*Hb0*Hb0);
 
 
 	init_genrand(time(0));
@@ -947,12 +957,12 @@ void slip_fft_cal()
 	} 
 
 
-
+	 #pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl)
 	
 	for(i=0;i<tN;++i)
 	{
 		 
-	  particle2mesh(tmpp,i,tmpphi,ak);
+	 // particle2mesh(tmpp,i,tmpphi,ak);
 
 	    
 	    
@@ -991,8 +1001,7 @@ void slip_fft_cal()
   		
 
 
-		V_fvl = V_f(f[i]);
-		Vvl = V(f[i]);
+		
 
 
 		
@@ -1012,21 +1021,21 @@ void slip_fft_cal()
 	
 	fftw_execute(slip_plan_f);
 	//printf("yha tk\n");
-
+ 	#pragma omp parallel for private(kfac)
 	for(i=0;i<tN;++i)
 	{
 
-		kfac = tpie*tpie*(k_grid[i][0]*k_grid[i][1]+k_grid[i][1]*k_grid[i][2]+k_grid[i][2]*k_grid[i][1]);
+		kfac = tpie*tpie*(k_grid[i][0]*k_grid[i][1]+k_grid[i][1]*k_grid[i][2]+k_grid[i][2]*k_grid[i][0]);
 		
 		if(kfac>1e-14)
 		{ slip_rhs_ft[i][0] = -slip_rhs_ft[i][0]/(kfac*n3sqrt); 
-		  slip_rhs[i][1] = -slip_rhs_ft[i][1]/(kfac*n3sqrt); ;
+		  slip_rhs_ft[i][1] = -slip_rhs_ft[i][1]/(kfac*n3sqrt); ;
 
 		}
 
 		else
 		{ slip_rhs_ft[i][0] = 0.0;
-		  slip_rhs[i][1] = 0.0;
+		  slip_rhs_ft[i][1] = 0.0;
 
 		}
 
@@ -1035,20 +1044,20 @@ void slip_fft_cal()
 
 
 	fftw_execute(slip_plan_b);
-
+	#pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl)
 	for(i=0;i<tN;++i)
 	{
-		tmpslip[i] = tmp;
-		tmp = slip[i]; 
+		tmpslip2[i] = tmpslip1[i];
+		tmpslip1[i] = slip[i]; 
 		slip[i] = slip_cal[i][0]/n3sqrt ; 
-		if(slip_cal[i][1]>1e-8)
+	//	if(((slip_cal[i][1]/slip_cal[i][0])>1e-8)&&(slip_cal[i][0]>1e-25))
 		{
-			printf("\n !!! Slip cal imag components !!! \n");
-			fail = 0;
-			break;
+	//		printf("\n !!! Slip cal imag components !!! \n");
+	//		fail = 0;
+			
 		}
 
-		slip_a[i] = 0.5*(3.0*slip[i]-4.0*tmp+tmpslip[i])/da; 
+		slip_a[i] = 0.5*(3.0*slip[i]-4.0*tmpslip1[i]+tmpslip2[i])/da; 
 
 
 
@@ -1073,6 +1082,9 @@ void slip_fft_cal()
 		
 		
 		LAPslip[i] += (-slip_cal[l2][0]+16.0*slip_cal[l1][0]-30.0*slip_cal[i][0]+16.0*slip_cal[r1][0]-slip_cal[r2][0])/(n3sqrt*d2[j]); 
+	
+		V_fvl = V_f(f[i]);
+		Vvl = V(f[i]);
 
 		
 		tul00[i]+= (Vvl + 0.5*tmpf_a[i]*tmpf_a[i]*a_t*a_t*(1.0-2.0*(phi[i]-slip[i]))) -fb00 ;
@@ -1118,16 +1130,16 @@ void cal_grd_tmunu()
 
 
 
-	
+	 #pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl)
 	  for(ci=0;ci<tN;++ci)
 	   {
-	    particle2mesh(p,ci,phi,a);
+	   // particle2mesh(p,ci,phi,a);
 
 	    
 
 	   
 	   
-	    LAPf[ci] = 0.0;
+	   // LAPf[ci] = 0.0;
 	    LAPslip[ci] = 0.0;
 	  
 	    
@@ -1148,7 +1160,7 @@ void cal_grd_tmunu()
 		
 		
 		
-		LAPf[ci] += (-f[l2]+16.0*f[l1]-30.0*f[ci]+16.0*f[r1]-f[r2])/(d2[j]); 
+		//LAPf[ci] += (-f[l2]+16.0*f[l1]-30.0*f[ci]+16.0*f[r1]-f[r2])/(d2[j]); 
 		
 
 		
@@ -1306,8 +1318,8 @@ void background()
     }
     
     a_t = sqrt((ommi*ai*ai*ai/a  + (1.0/(Mpl*Mpl))*a*a*Vvl/(3.0*c)) / ( 1.0 - (1.0/(Mpl*Mpl))*a*a*fb_a*fb_a/(6.0*c*c*c))) ;
-    Hi = H0*a/a_t;
-    printf("\nHi    %.20lf  \nratio(Hi/H0)  %.20lf\n",Hi,a/a_t);
+    Hi = Hb0*a/a_t;
+    printf("\nHi    %.20lf  \nratio(Hi/Hb0)  %.20lf\n",Hi,a/a_t);
     Vvl = V(fb);
     
     w = (fb_a*fb_a*a_t*a_t/(2.0*c*c) - Vvl)/(fb_a*fb_a*a_t*a_t/(2.0*c*c) + Vvl);
@@ -1338,7 +1350,8 @@ void write_fields()
 	{
 
 
-		fprintf(fpfields,"%d\t%lf\t%.20lf\t%.20lf\n",i,a/ai,density_contrast[i],phi[i]);
+		fprintf(fpfields,"%d\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
+					i,a/ai,density_contrast[i],phi[i],slip[i],p[i].x[0],p[i].x[1],p[i].x[2]);
 
 
 	}
@@ -1372,7 +1385,8 @@ void initialise()
         L[0] = dx[0]*((double) (n));  L[1] = dx[1]*((double) (n));  L[2] = dx[2]*((double) (n));
 	dk = 0.01/dx[0]; kbins = 0;
 
-	ini_rand_field();
+	//ini_rand_field();
+	  read_ini_rand_field();
         
 	for(ci = 0;ci <tN; ++ci)
 	{
@@ -1462,7 +1476,8 @@ void initialise()
 		 phi_a[ci] = 0.0;
 		 slip[ci] = 0.0;
 		 slip_a[ci] = 0.0;
-		 tmpslip[ci] = 0.0;
+		 tmpslip2[ci] = 0.0;
+		 tmpslip1[ci] = 0.0;
 		 slip_s[0][ci] = 0.0;
 		 slip_s[1][ci] = 0.0;
 		 slip_s[2][ci] = 0.0;
@@ -1552,7 +1567,7 @@ void initialise()
 	free(ini_vel0); free(ini_vel1); free(ini_vel2);
 
 	cal_dc_fr_particles();
-	
+	a = ai;
 	cal_spectrum(ini_density_contrast,fppwspctrm_dc,1);
 	a = a_zels;
 
@@ -1630,18 +1645,19 @@ int evolve(double aini, double astp)
 
 	
 	if((lcntr%jprints==0)&&(a!=aini))
-	   {
+	   { printf("printing..\n");
 
-		// cal_dc_fr_particles();
-      		// cal_spectrum(density_contrast,fppwspctrm_dc,0);
+		 cal_dc_fr_particles();
+      		 cal_spectrum(density_contrast,fppwspctrm_dc,0);
 		// cal_spectrum(phi,fppwspctrm_phi,0);
-		 //write_fields();
+		 write_fields();
 
 
 	  }
 
-/////////////////////////////////particle force calculation*****Step 1////////////////////////////////////////////////		 
 
+/////////////////////////////////particle force calculation*****Step 1////////////////////////////////////////////////		 
+	#pragma omp parallel for private(v,gamma,phiavg,phi_aavg,phi_savg,slip_savg,fsg,anchor,i,vmagsqr,Vvl,V_fvl)
 	 for(ci=0;ci>tN;++ci)
 	  {
 			vmagsqr = 0.0;	
@@ -1727,16 +1743,16 @@ int evolve(double aini, double astp)
 		//				- 3.0*phi_a[ci]/a -phi_a[ci]/a - a_tt*phi_a[ci]/(a_t*a_t);
 
 		phiacc1[ci] = (a_t*a_t/(a*a) + 2.0*a_tt/a )*(slip[ci]-phi[ci])/(a_t*a_t) + (slip_a[ci]-4.0*phi_a[ci])/a + (1.0/3.0)*LAPslip[ci]/(a*a*a_t*a_t)
-				-tuldss[ci]/(6.0*Mpl*Mpl*a_t*a_t) -  - a_tt*phi_a[ci]/(a_t*a_t);
+				-(tuldss[ci]+0.5*LAPf[ci]*(1.0+2.0*phi[ci])/a)/(6.0*Mpl*Mpl*a_t*a_t) -  - a_tt*phi_a[ci]/(a_t*a_t);
 
 
 		V_fvl = V_f(f[ci]);
 		Vvl = V(f[ci]);
 	
-		facc1[ci] = ( V_fvl/(a_t*a_t) + 3.0*phi_a[ci]/a - 3.0*f_a[ci]*phi_a[ci] - 6.0*(phi[ci]-slip[ci])*f_a[ci]/a 
+		facc1[ci] = ( V_fvl/(a_t*a_t) + 3.0*f_a[ci]/a - 3.0*f_a[ci]*phi_a[ci] - 6.0*(phi[ci]-slip[ci])*f_a[ci]/a 
 				- (phi_a[ci]-slip_a[ci])*f_a[ci] 
 				+(f_s[0][ci]*slip_s[0][ci]+f_s[1][ci]*slip_s[1][ci]+f_s[2][ci]*slip_s[2][ci] -LAPf[ci]*(1.0+2.0*phi[ci]))/(a*a*a_t*a_t) )
-			/(-1.0+2.0*phi[ci]) 
+			/(-1.0+2.0*(phi[ci]-slip[ci])) 
 			-a_tt*f_a[ci]/(a_t*a_t); 
 
 		
@@ -1826,7 +1842,7 @@ int evolve(double aini, double astp)
 	  
 
 	 
-
+	#pragma omp parallel for private(v,gamma,phiavg,phi_aavg,phi_savg,slip_savg,fsg,anchor,i,vmagsqr,Vvl,V_fvl)
 	 for(ci=0;ci>tN;++ci)
 	  {
 			vmagsqr = 0.0;	
@@ -1868,16 +1884,16 @@ int evolve(double aini, double astp)
 		
 		phiacc2[ci] = (a_t*a_t/(ak*ak) + 2.0*a_tt/ak )*(slip[ci]-phi[ci])/(a_t*a_t) + (slip_a[ci]-4.0*tmpphi_a[ci])/ak 
 				+ (1.0/3.0)*LAPslip[ci]/(ak*ak*a_t*a_t)
-				-tuldss[ci]/(6.0*Mpl*Mpl*a_t*a_t)   - a_tt*tmpphi_a[ci]/(a_t*a_t);
+				-(tuldss[ci]+0.5*LAPf[ci]*(1.0+2.0*phi[ci])/ak)/(6.0*Mpl*Mpl*a_t*a_t)   - a_tt*tmpphi_a[ci]/(a_t*a_t);
 
 
 		V_fvl = V_f(f[ci]);
 		Vvl = V(f[ci]);
 	
-		facc2[ci] = ( V_fvl/(a_t*a_t) + 3.0*tmpphi_a[ci]/ak - 3.0*tmpf_a[ci]*tmpphi_a[ci] - 6.0*(phi[ci]-slip[ci])*tmpf_a[ci]/ak 
+		facc2[ci] = ( V_fvl/(a_t*a_t) + 3.0*tmpf_a[ci]/ak - 3.0*tmpf_a[ci]*tmpphi_a[ci] - 6.0*(phi[ci]-slip[ci])*tmpf_a[ci]/ak 
 				- (tmpphi_a[ci]-slip_a[ci])*tmpf_a[ci] 
 				+(f_s[0][ci]*slip_s[0][ci]+f_s[1][ci]*slip_s[1][ci]+f_s[2][ci]*slip_s[2][ci] -LAPf[ci]*(1.0+2.0*phi[ci]))/(ak*ak*a_t*a_t) )
-			/(-1.0+2.0*phi[ci]) 
+			/(-1.0+2.0*(phi[ci]-slip[ci])) 
 			-a_tt*tmpf_a[ci]/(a_t*a_t); 
 
 

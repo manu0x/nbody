@@ -1618,7 +1618,7 @@ int evolve(double aini, double astp)
 		V_fvl = V_f(f[ci]);
 		Vvl = V(f[ci]);
 	
-		facc1[ci] = ( V_fvl/(a_t*a_t) + 3.0*phi_a[ci]/a - 3.0*f_a[ci]*phi_a[ci] - 6.0*phi[ci]*f_a[ci]/a 
+		facc1[ci] = ( V_fvl/(a_t*a_t) + 3.0*f_a[ci]/a - 3.0*f_a[ci]*phi_a[ci] - 6.0*phi[ci]*f_a[ci]/a 
 				- phi_a[ci]*f_a[ci] -LAPf[ci]*(1.0+2.0*phi[ci])/(a*a*a_t*a_t) )/(-1.0+2.0*phi[ci])-a_tt*f_a[ci]/(a_t*a_t); 
 
 		
@@ -1754,7 +1754,7 @@ int evolve(double aini, double astp)
 		V_fvl = V_f(f[ci]);
 		Vvl = V(f[ci]);
 	
-		facc2[ci] = ( V_fvl/(a_t*a_t) + 3.0*tmpphi_a[ci]/a - 3.0*tmpf_a[ci]*phi_a[ci] - 
+		facc2[ci] = ( V_fvl/(a_t*a_t) + 3.0*tmpf_a[ci]/a - 3.0*tmpf_a[ci]*phi_a[ci] - 
 				6.0*phi[ci]*tmpf_a[ci]/a - tmpphi_a[ci]*tmpf_a[ci] 
 				-LAPf[ci]*(1.0+2.0*phi[ci])/(a*a*a_t*a_t) )/(-1.0+2.0*phi[ci])-a_tt*tmpf_a[ci]/(a_t*a_t); 
 
