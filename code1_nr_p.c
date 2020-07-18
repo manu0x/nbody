@@ -91,7 +91,7 @@ fftw_plan slip_plan_b;
 
 //int nic[n*n*n][16];
 
-double  omdmb, omdeb, a, ak, a_t, a_tt, Vamp, ai, a0, da, ak, fb, fb_a,a_zels;
+double  omdmb, omdeb, a, ak, a_t, a_tt, Vamp, ai, a0, da, fb, fb_a,a_zels;
 double fb_zeldo,fb_a_zeldo;
 double cpmc = (0.14/(0.68*0.68));
 int jprint,jprints;
@@ -827,7 +827,7 @@ void ini_displace_particle(double thres)
 		}
 	 }
 
-
+			
 }
 
 
@@ -1603,7 +1603,7 @@ int evolve(double aini, double astp)
 
     int i,j,lcntr,ci;
 
-    double nd = (double) n, jd;  ///Watch out for local vs global for parallelization
+     ///Watch out for local vs global for parallelization
     double phiacc1[n*n*n],phiacc2[n*n*n],facc1[n*n*n],facc2[n*n*n],pacc1[n*n*n][3],pacc2[n*n*n][3],v,gamma,phiavg,phi_aavg,phi_savg[3],slip_savg[3],fsg;
     double vmagsqr;
     int anchor[3];
@@ -1663,7 +1663,7 @@ int evolve(double aini, double astp)
 			vmagsqr = 0.0;	
 
 	
-		phiavg = mesh2particle(p,ci,phi);
+		//phiavg = mesh2particle(p,ci,phi);
 		//phiavg = mesh2particle(p,ci,phi);
 		//phi_aavg = mesh2particle(p,ci,phi_a);
 		//phi_aavg = mesh2particle(p,ci,phi_a);
@@ -1713,6 +1713,8 @@ int evolve(double aini, double astp)
 		
 		
 			anchor[i] =   (int) (p[ci].x[i]/dx[i]);
+		
+			anchor[j] =  ( n + ((int) (p[ci].x[i]/dx[i])) )%n; 
 
 			
 			
@@ -1743,7 +1745,7 @@ int evolve(double aini, double astp)
 		//				- 3.0*phi_a[ci]/a -phi_a[ci]/a - a_tt*phi_a[ci]/(a_t*a_t);
 
 		phiacc1[ci] = (a_t*a_t/(a*a) + 2.0*a_tt/a )*(slip[ci]-phi[ci])/(a_t*a_t) + (slip_a[ci]-4.0*phi_a[ci])/a + (1.0/3.0)*LAPslip[ci]/(a*a*a_t*a_t)
-				-(tuldss[ci]+0.5*LAPf[ci]*(1.0+2.0*phi[ci])/a)/(6.0*Mpl*Mpl*a_t*a_t) -  - a_tt*phi_a[ci]/(a_t*a_t);
+				-(tuldss[ci]+0.5*LAPf[ci]*(1.0+2.0*phi[ci])/(a*a))/(6.0*Mpl*Mpl*a_t*a_t)   - a_tt*phi_a[ci]/(a_t*a_t);
 
 
 		V_fvl = V_f(f[ci]);
@@ -1780,10 +1782,7 @@ int evolve(double aini, double astp)
 
 		//fprintf(fptest1,"\n\n\n");
 		
-	 if(lcntr%jprint==0)
-	     {		fprintf(fpphi,"\n\n\n");  
-	    }
-
+	 
 
 
 		
@@ -1848,13 +1847,14 @@ int evolve(double aini, double astp)
 			vmagsqr = 0.0;	
 
 		
-		phiavg = mesh2particle(p,ci,phi);
+		//phiavg = mesh2particle(p,ci,phi);
 		
-		phi_aavg = mesh2particle(p,ci,tmpphi_a);
+		//phi_aavg = mesh2particle(p,ci,tmpphi_a);
 		
 		fsg = 0.0;
 		for(i=0;i<3;++i)
 		{	//phi_savg[i] = mesh2particle(tmpp,ci,&phi_s[i][0]);
+			slip_savg[i] = mesh2particle(p,ci,&slip_s[i][0]);
 			phi_savg[i] = mesh2particle(p,ci,&phi_s[i][0]);
 			//fsg+= 2.0*tmpp[ci].v[i]*a_t*( phi_savg[i] + phi_savg[i] );
 			//vmagsqr+=tmpp[ci].v[i]*tmpp[ci].v[i];
@@ -1865,7 +1865,7 @@ int evolve(double aini, double astp)
 		{
 			
 			pacc2[ci][i] = tmpp[ci].v[i]*( -2.0/ak )
-				 -(phi_savg[i]/(ak*ak))/(a_t*a_t) - a_tt*tmpp[ci].v[i]/(a_t*a_t);
+				 -((phi_savg[i]-slip_savg[i])/(ak*ak))/(a_t*a_t) - a_tt*tmpp[ci].v[i]/(a_t*a_t);
 			
 
 		/*	pacc[i] = (tmpp[ci].v[i]*a_t*a_t*a_t*vmagsqr*(-2.0*ak*a_t*(phiavg+phiavg)-ak*ak*phi_aavg*a_t+a*a_t)
@@ -1884,7 +1884,7 @@ int evolve(double aini, double astp)
 		
 		phiacc2[ci] = (a_t*a_t/(ak*ak) + 2.0*a_tt/ak )*(slip[ci]-phi[ci])/(a_t*a_t) + (slip_a[ci]-4.0*tmpphi_a[ci])/ak 
 				+ (1.0/3.0)*LAPslip[ci]/(ak*ak*a_t*a_t)
-				-(tuldss[ci]+0.5*LAPf[ci]*(1.0+2.0*phi[ci])/ak)/(6.0*Mpl*Mpl*a_t*a_t)   - a_tt*tmpphi_a[ci]/(a_t*a_t);
+				-(tuldss[ci]+0.5*LAPf[ci]*(1.0+2.0*phi[ci])/(ak*ak))/(6.0*Mpl*Mpl*a_t*a_t)   - a_tt*tmpphi_a[ci]/(a_t*a_t);
 
 
 		V_fvl = V_f(f[ci]);
@@ -1918,7 +1918,9 @@ int evolve(double aini, double astp)
 	}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////Final Tul and phi recosntruction/////////////////////////////////////////////////////////////
-		
+	
+	 a = a+da;
+	
       a_t = sqrt((Hi*Hi*ommi*ai*ai*ai/a  + (1.0/(Mpl*Mpl))*a*a*Vvlb/(3.0*c)) / ( 1.0 - (1.0/(Mpl*Mpl))*a*a*fb_a*fb_a/(6.0*c*c*c))) ;
       a_tt = -0.5*ommi*Hi*Hi*ai*ai*ai/(a*a) - (1.0/(Mpl*Mpl*c))*a*(fb_a*fb_a*a_t*a_t - Vvlb)/3.0;
 
@@ -1940,7 +1942,7 @@ int evolve(double aini, double astp)
 	
 	
 
-      a = a+da;
+     
 
  //   printf("evolve w  %.10lf  Hi %.10lf  %.10lf  %.10lf\n",a_t,a,a0);
 
