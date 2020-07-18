@@ -197,7 +197,7 @@ void main()
 	initialise();
 	
 	
-       //i = evolve(a_zels,a0/ai);
+       i = evolve(a_zels,a0/ai);
 	printf("ffEvvvolove\n");
        cal_dc_fr_particles();
        cal_spectrum(density_contrast,fppwspctrm_dc,0);
@@ -382,14 +382,14 @@ void cal_dc_fr_particles()
 void read_ini_rand_field()
 {
 
-	int cnt;
+	int cnt,i;
 
 	FILE *fpinirand = fopen("initial_rand_field.txt","r");
 
 	for(cnt=0;cnt<tN;++cnt)
 	{
 		fscanf(fpinirand,"%d\t%lf\t%lf\t%lf\t%lf\t%lf\n",
-					cnt,ini_density_contrast[cnt],ini_phi_potn[cnt],ini_vel0[cnt],ini_vel1[cnt],ini_vel2[cnt]);
+					&i,&ini_density_contrast[cnt],&ini_phi_potn[cnt],&ini_vel0[cnt],&ini_vel1[cnt],&ini_vel2[cnt]);
 
 
 
@@ -1216,7 +1216,7 @@ void initialise()
 
     
       
-      int xcntr[3]={-1,-1,-1},anchor[3];
+      int xcntr[3]={-1,-1,-1},anchor[3],ci,j;
       double gamma, v, gradmagf;
       double ktmp,maxkmagsqr = 0.0;
       double wktmp,shtmp;
@@ -1232,7 +1232,8 @@ void initialise()
         L[0] = dx[0]*((double) (n));  L[1] = dx[1]*((double) (n));  L[2] = dx[2]*((double) (n));
 	dk = 0.01/dx[0]; kbins = 0;
 
-	ini_rand_field();
+	//ini_rand_field();
+	read_ini_rand_field();
         
 	for(ci = 0;ci <tN; ++ci)
 	{
@@ -1587,7 +1588,7 @@ int evolve(double aini, double astp)
 		
 			//anchor[i] =   (int) (p[ci].x[i]/dx[i]);
 
-			anchor[j] =  ( n + ((int) (p[ci].x[i]/dx[i])) )%n; 
+			anchor[i] =  ( n + ((int) (p[ci].x[i]/dx[i])) )%n; 
 			
 
 	
