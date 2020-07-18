@@ -22,7 +22,7 @@ double G   = 1.0;
 double c   = 1.0;
 double Mpl ;
 double lenfac = 1e3;
-double H0  ;
+double Hb0  ;
 double L[3];
 int tN;
 int fail =1;
@@ -85,7 +85,7 @@ double  omdmb, omdeb, a, ak, a_t, a_tt, Vamp, ai, a0, da, ak, fb, fb_a,a_zels;
 double fb_zeldo,fb_a_zeldo;
 double cpmc = (0.14/(0.68*0.68));
 int jprint,jprints;
-double H0, Hi;
+double Hb0, Hi;
 
 FILE *fpback;
 FILE *fptest1;
@@ -123,7 +123,7 @@ void cal_grd_tmunu();
 
 void main()
 {       Mpl = 1.0/sqrt(8.0*3.142*G) ;
-	H0  = 22.04*(1e-5)*lenfac;
+	Hb0  = 22.04*(1e-5)*lenfac;
 
         da = 1e-5;
         jprint = (int) (0.001/da);
@@ -131,7 +131,7 @@ void main()
 	
 	tN=n*n*n;
         
-	printf("qqqjprint %d tN %d  H0 %.10lf\n",jprint,n,H0); 
+	printf("qqqjprint %d tN %d  Hb0 %.10lf\n",jprint,n,Hb0); 
 	//feenableexcept(FE_DIVBYZERO | FE_ItNVALID | FE_OVERFLOW);
 	//feenableexcept(FE_DIVBYZERO | FE_ItNVALID | FE_OVERFLOW);
 
@@ -410,7 +410,7 @@ void ini_rand_field()
 
 
 	
-	double zdvfac = -(2.0/3.0)*a_t/(cpmc*H0*H0);
+	double zdvfac = -(2.0/3.0)*a_t/(cpmc*Hb0*Hb0);
 
 
 	init_genrand(time(0));
@@ -1166,8 +1166,8 @@ void background()
     }
     
     a_t = sqrt((ommi*ai*ai*ai/a  + (1.0/(Mpl*Mpl))*a*a*Vvl/(3.0*c)) / ( 1.0 - (1.0/(Mpl*Mpl))*a*a*fb_a*fb_a/(6.0*c*c*c))) ;
-    Hi = H0*a/a_t;
-    printf("\nHi    %.20lf  \nratio(Hi/H0)  %.20lf\n",Hi,a/a_t);
+    Hi = Hb0*a/a_t;
+    printf("\nHi    %.20lf  \nratio(Hi/Hb0)  %.20lf\n",Hi,a/a_t);
     Vvl = V(fb);
     
     w = (fb_a*fb_a*a_t*a_t/(2.0*c*c) - Vvl)/(fb_a*fb_a*a_t*a_t/(2.0*c*c) + Vvl);
@@ -1215,7 +1215,7 @@ void initialise()
       int l1,l2,r1,r2;
 
     
-      int px,py,pz,ci,pgi,j;
+      
       int xcntr[3]={-1,-1,-1},anchor[3];
       double gamma, v, gradmagf;
       double ktmp,maxkmagsqr = 0.0;
@@ -1585,9 +1585,9 @@ int evolve(double aini, double astp)
 		tmpp[ci].x[i] = p[ci].x[i]; 
 		
 		
-			anchor[i] =   (int) (p[ci].x[i]/dx[i]);
+			//anchor[i] =   (int) (p[ci].x[i]/dx[i]);
 
-			
+			anchor[j] =  ( n + ((int) (p[ci].x[i]/dx[i])) )%n; 
 			
 
 	
@@ -1779,7 +1779,9 @@ int evolve(double aini, double astp)
 	}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////Final Tul and phi recosntruction/////////////////////////////////////////////////////////////
-		
+	 a = a+da;		
+
+
       a_t = sqrt((Hi*Hi*ommi*ai*ai*ai/a  + (1.0/(Mpl*Mpl))*a*a*Vvlb/(3.0*c)) / ( 1.0 - (1.0/(Mpl*Mpl))*a*a*fb_a*fb_a/(6.0*c*c*c))) ;
       a_tt = -0.5*ommi*Hi*Hi*ai*ai*ai/(a*a) - (1.0/(Mpl*Mpl*c))*a*(fb_a*fb_a*a_t*a_t - Vvlb)/3.0;
 
@@ -1801,7 +1803,7 @@ int evolve(double aini, double astp)
 	
 	
 
-      a = a+da;
+     
 
  //   printf("evolve w  %.10lf  Hi %.10lf  %.10lf  %.10lf\n",a_t,a,a0);
 

@@ -1712,7 +1712,7 @@ int evolve(double aini, double astp)
 		tmpp[ci].x[i] = p[ci].x[i]; 
 		
 		
-			anchor[i] =   (int) (p[ci].x[i]/dx[i]);
+			//anchor[i] =   (int) (p[ci].x[i]/dx[i]);
 		
 			anchor[j] =  ( n + ((int) (p[ci].x[i]/dx[i])) )%n; 
 
