@@ -88,13 +88,12 @@ int jprint,jprints;
 double Hb0, Hi;
 
 FILE *fpback;
-FILE *fptest1;
-FILE *fptest2;
+FILE *fp_particles;
 FILE *fpdc;
 FILE *fpphi;
 FILE *fppwspctrm_dc;
 FILE *fppwspctrm_phi;
-FILE *fpfields;
+FILE *fp_fields;
 FILE *fplinscale;
 
 
@@ -140,14 +139,13 @@ void main()
 
 	
 	
-	fptest1  = fopen("test1.txt","w");
-	fptest2  = fopen("test2.txt","w");
+	fp_particles  = fopen("particles.txt","w");
 	fpdc  = fopen("dc.txt","w");
 	fpback  = fopen("back.txt","w");
 	fppwspctrm_dc  = fopen("pwspctrm_dc2.txt","w");
 	fppwspctrm_phi  = fopen("pwspctrm_phi.txt","w");
 	fpphi = fopen("phi.txt","w");
-	fpfields = fopen("fields.txt","w");
+	fp_fields = fopen("fields.txt","w");
 	fplinscale = fopen("linscale.txt","w");
 
 
@@ -1194,16 +1192,35 @@ void background()
 void write_fields()
 {
 	int i;
+	double f_dc,f_prsr, f_denst, Vvl, Vvlb,back_f_denst;
+
+	Vvlb = V(fb);
+
+	back_f_denst = (0.5*fb_a*a_t*fb_a*a_t + Vvlb);
+
 	for(i=0;i<tN;++i)
 	{
+		Vvl = V(f[i]);	
+				
 
+		f_prsr = 0.5*( f_a[i]*a_t*f_a[i]*a_t/(1.0+2.0*(phi[i]))
+			 - (f_s[0][i]*f_s[0][i]+f_s[1][i]*f_s[1][i]+f_s[2][i]*f_s[2][i])/(a*a*(1.0-2.0*phi[i])) ) - Vvl;
+		f_denst = 0.5*( f_a[i]*a_t*f_a[i]*a_t/(1.0+2.0*(phi[i]))
+			 - (f_s[0][i]*f_s[0][i]+f_s[1][i]*f_s[1][i]+f_s[2][i]*f_s[2][i])/(a*a*(1.0-2.0*phi[i])) ) + Vvl;
 
-		fprintf(fpfields,"%d\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",i,a/ai,density_contrast[i],phi[i],p[i].x[0],p[i].x[1],p[i].x[2]);
+		f_dc = (f_denst/back_f_denst)-1.0;
+
+		fprintf(fp_fields,"%d\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
+					i,a/ai,density_contrast[i],phi[i],0.0,f[i],f_dc,f_prsr/f_denst);
+
+		fprintf(fp_particles,"%d\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
+					i,a/ai,p[i].x[0],p[i].x[1],p[i].x[2],p[i].v[0],p[i].v[1],p[i].v[2]);
 
 
 	}
 
-	fprintf(fpfields,"\n\n\n");
+	fprintf(fp_fields,"\n\n\n");
+	fprintf(fp_particles,"\n\n\n");
 
 }
 
@@ -1555,7 +1572,7 @@ int evolve(double aini, double astp)
 			
 			pacc1[ci][i] = p[ci].v[i]*(-2.0/a)
 				 -(phi_savg[i]/(a*a))/(a_t*a_t) - a_tt*p[ci].v[i]/(a_t*a_t);
-			//fprintf(fptest1,"%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
+			//fprintf(fp_particles,"%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
 			//	p[ci].v[i]*a_t*a_t*a_t*vmagsqr*(-2.0*a*a_t*(phiavg+phiavg)-a*a*phi_aavg*a_t+a*a_t),
 			//		p[ci].v[i]*a_t*(fsg + phi_aavg*a_t + 2.0*phi_aavg*a_t -phi_savg[i]),phi_savg[i]/(a*a),p[ci].v[i]*a_t);
 
@@ -1645,7 +1662,7 @@ int evolve(double aini, double astp)
 		
 	  }
 
-		//fprintf(fptest1,"\n\n\n");
+		//fprintf(fp_particles,"\n\n\n");
 		
 	 
 
@@ -1800,7 +1817,7 @@ int evolve(double aini, double astp)
 	
 
 
-	//fprintf(fptest1,"\n\n\n");
+	//fprintf(fp_particles,"\n\n\n");
 	
 	
 
