@@ -1362,8 +1362,8 @@ void write_fields()
 
 		f_dc = (f_denst/back_f_denst)-1.0;
 
-		fprintf(fp_fields,"%d\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
-					i,a/ai,density_contrast[i],phi[i],slip[i],f[i],f_dc,f_prsr/f_denst);
+		fprintf(fp_fields,"%d\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
+					i,a/ai,grid[i][0],grid[i][1],grid[i][2],density_contrast[i],phi[i],0.0,f[i],f_dc,f_prsr/f_denst);
 
 		fprintf(fp_particles,"%d\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
 					i,a/ai,p[i].x[0],p[i].x[1],p[i].x[2],p[i].v[0],p[i].v[1],p[i].v[2]);
@@ -1709,6 +1709,10 @@ int evolve(double aini, double astp)
 			tmpp[ci].v[i] = p[ci].v[i] + da*pacc1[ci][i]; 
 			 
 
+			if(isnan(p[ci].x[i]))
+				fail=0;
+	
+
 			//if(isnan(tmpp[ci].v[i]))
 			//{
 
@@ -1786,6 +1790,8 @@ int evolve(double aini, double astp)
 		tmpf_a[ci] = f_a[ci]+da*facc1[ci];
 
 
+		if(isnan(f[ci]+phi[ci]))
+				fail=0;
 		
 
 		
