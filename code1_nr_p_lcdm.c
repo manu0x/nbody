@@ -1388,7 +1388,7 @@ int evolve(double aini, double astp)
 		}
 
 	
-	if((lcntr%jprints==0)&&(a!=aini))
+	if((lcntr%jprints==0))
 	   { printf("printing..\n");
 
 		 cal_dc_fr_particles();
@@ -1651,7 +1651,7 @@ int evolve(double aini, double astp)
  //   printf("evolve w  %.10lf  Hi %.10lf  %.10lf  %.10lf\n",a_t,a,a0);
 
     if(fail!=1)
-    {printf("fail  %d %d  %lf\n",fail,lcntr,a); 
+    {//printf("fail  %d %d  %lf\n",fail,lcntr,a); 
 	return(fail);
     }    
 	

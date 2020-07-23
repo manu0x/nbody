@@ -1660,7 +1660,7 @@ int evolve(double aini, double astp)
 		}
 
 	
-	if((lcntr%jprints==0)&&(a!=aini))
+	if((lcntr%jprints==0))
 	   { printf("printing..\n");
 
 		 cal_dc_fr_particles();
@@ -1674,7 +1674,7 @@ int evolve(double aini, double astp)
 
 /////////////////////////////////particle force calculation*****Step 1////////////////////////////////////////////////		 
 	#pragma omp parallel for private(v,gamma,phiavg,phi_aavg,phi_savg,slip_savg,fsg,anchor,i,vmagsqr,Vvl,V_fvl)
-	 for(ci=0;ci>tN;++ci)
+	 for(ci=0;ci<tN;++ci)
 	  {
 			vmagsqr = 0.0;	
 
@@ -1849,7 +1849,7 @@ int evolve(double aini, double astp)
        
 
 	if(isnan(fb_a+fb))
-	{	fail=0;printf("%d Alert %lf\n",lcntr,facb2,fb_a);
+	{	fail=0;//printf("%d Alert %lf\n",lcntr,facb2,fb_a);
 		break;
 		
 	}
@@ -1863,7 +1863,7 @@ int evolve(double aini, double astp)
 
 	 
 	#pragma omp parallel for private(v,gamma,phiavg,phi_aavg,phi_savg,slip_savg,fsg,anchor,i,vmagsqr,Vvl,V_fvl)
-	 for(ci=0;ci>tN;++ci)
+	 for(ci=0;ci<tN;++ci)
 	  {
 			vmagsqr = 0.0;	
 
@@ -1968,7 +1968,7 @@ int evolve(double aini, double astp)
  //   printf("evolve w  %.10lf  Hi %.10lf  %.10lf  %.10lf\n",a_t,a,a0);
 
     if(fail!=1)
-    {printf("fail  %d %d  %lf\n",fail,lcntr,a); 
+    {//printf("fail  %d %d  %lf\n",fail,lcntr,a); 
 	return(fail);
     }    
 	
