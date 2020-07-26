@@ -1491,7 +1491,7 @@ void write_fields()
 		f_dc = (f_denst/back_f_denst)-1.0;
 
 		fprintf(fp_fields,"%d\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
-					i,a/ai,grid[i][0],grid[i][1],grid[i][2],density_contrast[i],phi[i],0.0,f[i],f_dc,f_prsr/f_denst);
+					i,a/ai,grid[i][0],grid[i][1],grid[i][2],density_contrast[i],phi[i],slip[i],f[i],f_dc,f_prsr/f_denst);
 
 		fprintf(fp_particles,"%d\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
 					i,a/ai,p[i].x[0],p[i].x[1],p[i].x[2],p[i].v[0],p[i].v[1],p[i].v[2]);
@@ -1509,7 +1509,8 @@ void write_fields()
 
 void initialise()
 {
-      int l1,l2,r1,r2,Vvlb;
+      int l1,l2,r1,r2;
+      double Vvlb;
 
     
       int px,py,pz,ci,pgi,j;

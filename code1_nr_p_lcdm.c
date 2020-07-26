@@ -82,7 +82,8 @@ fftw_plan ini_v2_plan;
 //int nic[n*n*n][16];
 
 double  omdmb, omdeb, a, ak, a_t, a_tt, Vamp, ai, a0, da, ak, fb, fb_a,a_zels;
-double fb_zeldo,fb_a_zeldo;
+double  lin_phi,lin_phi_a,lin_ini_dcm,lin_ini_phi,lin_dcm,lin_growth,kf; int lin_i;
+double lin_phi_zeldo,lin_phi_a_zeldo;
 double cpmc = (0.14/(0.68*0.68));
 int jprint,jprints;
 double Hb0, Hi;
@@ -95,9 +96,11 @@ FILE *fppwspctrm_dc;
 FILE *fppwspctrm_phi;
 FILE *fp_fields;
 FILE *fplinscale;
+FILE *fplin;
 
 
 void background();
+void backlin();
 
 
 
@@ -145,6 +148,7 @@ void main()
 	fpphi = fopen("phi.txt","w");
 	fp_fields = fopen("fields.txt","w");
 	fplinscale = fopen("linscale.txt","w");
+	fplin = fopen("lpt.txt","w");
 
 
         int i;
@@ -269,6 +273,21 @@ void cal_spectrum(double *spcmesh,FILE *fspwrite,int isini)
 	
 
 	}
+
+	if(isini==1)
+	{
+		
+		
+		
+		lin_ini_dcm  = sqrt(pwspctrm[lin_i]/(kbincnt[lin_i]));
+		lin_ini_phi = -1.5*omdmb*pow(ai/ai,3.0)*Hi*Hi*lin_ini_dcm/(kf*kf/(ai*ai) +3.0*(a_t/ai)*(a_t/ai) );
+
+		//-(2.0*a*a*a/(3.0*ommi*ai*ai*ai))*( 3.0*lin_phi*a_t*a_t/(a*a)  + kf*kf*lin_phi/(Hi*Hi*a*a) )
+
+		printf("li is %d and lin_ini_dcm is %.20lf lin_ini_phi is %.20lf\n",lin_i,lin_ini_dcm,kf);
+
+	}
+
 	
 	fftw_free(Fdens_cntrst);
 	fftw_destroy_plan(spec_plan);
@@ -1063,6 +1082,152 @@ void background()
 }
 
 
+
+
+void backlin()
+{ 
+
+   
+   int j;
+   
+   double lin_phiac1,lin_phiac2,lin_phi_ak;
+   
+  
+   
+   int fail=1,zs_check=0;
+   ai = 0.001;
+   a0 = 1.0;
+   a_t = ai;
+
+
+    double ommi = (cpmc)*pow((a0/ai),3.0)/(cpmc*a0*a0*a0/(ai*ai*ai) + (1.0-cpmc));
+    double omdei = 1.0-ommi;
+    double omfb;
+
+
+
+
+	
+		
+
+		lin_phi = 1.0;
+		lin_phi_a =  0.0;
+   		
+ 
+
+
+
+
+
+	
+
+
+
+	
+    for(j=0,a=ai;a<=a0&&(fail>0);a+=da,++j)
+    {   
+	
+       
+	a_t = sqrt(ommi*ai*ai*ai/(a)  + (1.0-ommi)*a*a ) ; 
+       
+        a_tt =  -0.5*ommi*ai*ai*ai/(a*a) + (1.0-ommi)*a;
+	
+	if((a>=a_zels)&&(zs_check==0))
+
+	{
+ 		
+
+		lin_phi_zeldo = lin_phi;
+		
+
+		lin_phi_a_zeldo = lin_phi_a;
+		
+		zs_check=1;
+
+		
+        }
+
+
+
+	
+	
+
+		lin_dcm = -(2.0*a*a*a/(3.0*ommi*ai*ai*ai))*( 3.0*lin_phi*a_t*a_t/(a*a) + 3.0*lin_phi_a*a_t*a_t/(a) + kf*kf*lin_phi/(Hi*Hi*a*a) );
+		//printf("\nlin_dcm %lf inidcm  %lf  \n",lin_dcm*lin_ini_phi,lin_ini_dcm);
+
+
+
+
+		 lin_phiac1 = -4.0*lin_phi_a/a - (2.0*a_tt/(a*a_t*a_t) + 1.0/(a*a))*lin_phi - a_tt*lin_phi_a/(a_t*a_t);
+
+		
+     		 lin_phi = lin_phi + lin_phi_a*da + 0.5*lin_phiac1*da*da;
+    		 lin_phi_ak = lin_phi_a + lin_phiac1*da;
+
+		 
+
+		
+
+
+		 
+		ak = a+da;
+
+
+	
+
+
+	
+
+	if(j%jprint==0)
+	fprintf(fpback,"%lf\t%.10lf\t%.10lf\t%.10lf\t%.10lf\n",a/ai,ommi*ai*ai*ai/(a*a_t*a_t),a_tt,lin_phi,lin_dcm*lin_ini_phi/lin_ini_dcm);
+
+
+       
+      		a_t = sqrt(ommi*ai*ai*ai/(ak)  + (1.0-ommi)*ak*ak ) ; 
+       
+        	a_tt =  -0.5*ommi*ai*ai*ai/(ak*ak) + (1.0-ommi)*ak;
+      
+      
+
+		
+	
+
+	
+		lin_phiac2 = -4.0*lin_phi_ak/ak - (2.0*a_tt/(ak*a_t*a_t) + 1.0/(ak*ak))*lin_phi  - a_tt*lin_phi_ak/(a_t*a_t);
+
+		
+       		lin_phi_a = lin_phi_a + (lin_phiac1+lin_phiac2)*0.5*da;
+       
+
+
+
+	
+
+
+	
+
+
+         
+    }
+    
+   
+ 	fprintf(fpback,"\n\n\n");
+
+
+   
+    
+   
+ 
+}
+
+
+
+
+
+
+
+
+
 void write_fields()
 {
 	int i;
@@ -1106,8 +1271,13 @@ void initialise()
       a = ai;
       omdmb= (cpmc)*pow((a0/ai),3.0)/(cpmc*a0*a0*a0/(ai*ai*ai) + (1.0-cpmc));
       printf("omdmb  %.10lf\n",omdmb);
+      double ommi = omdmb;
 
      a_t=Hi*ai;
+
+	lin_i = 10;
+
+	kf = tpie*lenfac/(64.0);
 
 	dx[0] = 0.001; dx[1] =0.001; dx[2] = 0.001;
         L[0] = dx[0]*((double) (n));  L[1] = dx[1]*((double) (n));  L[2] = dx[2]*((double) (n));
@@ -1246,11 +1416,16 @@ void initialise()
 
 
   
+	cal_spectrum(ini_density_contrast,fppwspctrm_dc,1);
+
+  
 	ini_displace_particle(0.1);
+	backlin();
+
 	
-	background();
-	
-	a = ai;
+
+	a = a_zels;
+
 	
 
 	
@@ -1323,6 +1498,10 @@ void initialise()
 	cal_spectrum(ini_density_contrast,fppwspctrm_dc,1);
 	a = a_zels;
 
+	  a_t = Hi*sqrt(ommi*ai*ai*ai/(a)  + (1.0-ommi)*a*a ) ; 
+       
+        a_tt =  -0.5*ommi*Hi*Hi*ai*ai*ai/(a*a) + (1.0-ommi)*Hi*Hi*a;
+
 	cal_grd_tmunu(0);
 
 	cal_spectrum(density_contrast,fppwspctrm_dc,0);
@@ -1338,7 +1517,7 @@ void initialise()
 	printf("\n	Grid Length is %.5lf MPc",dx[0]*lenfac*((double) n));
 	printf("\n	dx is %.10lf MPc\n",dx[0]*lenfac);
 
-	
+	printf("\n Linear theory kf is %lf kl %lf Mpc %lf\n",kf,tpie*lenfac/kf,lin_phi);
 	
 
 	  
@@ -1352,7 +1531,7 @@ int evolve(double aini, double astp)
 
 
     double ommi = omdmb;
-    double facb1,facb2,Vvl,V_fvl,fb_ak,fbk,omfb,Vvlb,V_fvlb;
+    double facb1,facb2,lin_delfac1,lin_phiac1,lin_phiac2,lin_phi_ak;
     double w;
 
     int i,j,lcntr,ci;
@@ -1375,14 +1554,36 @@ int evolve(double aini, double astp)
       a_t = Hi*sqrt(ommi*ai*ai*ai/(a)  + (1.0-ommi)*a*a ) ; 
        
         a_tt =  -0.5*ommi*Hi*Hi*ai*ai*ai/(a*a) + (1.0-ommi)*Hi*Hi*a;
+
+
+	lin_dcm = -(2.0*a*a*a/(3.0*Hi*Hi*ommi*ai*ai*ai))*( 3.0*lin_phi*a_t*a_t/(a*a) + 3.0*lin_phi_a*a_t*a_t/(a) + kf*kf*lin_phi/(a*a) ) ;
+
+	lin_growth = lin_dcm*lin_ini_phi/lin_ini_dcm;
+
+
+
+	
+
+	
+	lin_phiac1 = -4.0*lin_phi_a/a - (2.0*a_tt/(a*a_t*a_t) + 1.0/(a*a))*lin_phi  - a_tt*lin_phi_a/(a_t*a_t);
+
+	
+
+     
+      lin_phi = lin_phi + lin_phi_a*da + 0.5*lin_phiac1*da*da;
+      lin_phi_ak = lin_phi_a + lin_phiac1*da;
+
+
          
          
 	  if(lcntr%jprint==0)
 	  { 
-		 omfb = (1.0/(3.0*c*c*c*Mpl*Mpl))*(fb_a*fb_a*a_t*a_t/(2.0*c*c) + Vvlb);
+	
 
-		fprintf(fpback,"%lf\t%.10lf\t%.10lf\n",a/ai,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t),omfb*a*a/(a_t*a_t));
-		printf("a  %lf %.10lf  %.10lf\n",a,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t),omfb);
+		fprintf(fpback,"%lf\t%.10lf\t%.10lf\n",a/ai,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t),a_tt);
+		fprintf(fplin,"%lf\t%.20lf\t%.20lf\n",a/ai,lin_growth,a/ai);
+
+		printf("a  %lf %.10lf  %.10lf\n",a,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t),a);
 
 	
 		}
@@ -1524,6 +1725,14 @@ int evolve(double aini, double astp)
 	 a_t = Hi*sqrt(ommi*ai*ai*ai/(ak)  + (1.0-ommi)*ak*ak ) ; 
        
         a_tt =  -0.5*ommi*Hi*Hi*ai*ai*ai/(ak*ak) + (1.0-ommi)*Hi*Hi*ak;
+
+
+	lin_phiac2 = -4.0*lin_phi_ak/ak - (2.0*a_tt/(ak*a_t*a_t) + 1.0/(ak*ak))*lin_phi  - a_tt*lin_phi_ak/(a_t*a_t);
+
+	
+
+       
+       lin_phi_a = lin_phi_a + (lin_phiac1+lin_phiac2)*0.5*da;
  
 	   
 /////////////////////Intermediate Tul calculations and psi construction//////////////////////////////////////////
@@ -1642,7 +1851,7 @@ int evolve(double aini, double astp)
 	
 
 
-	//fprintf(fp_particles,"\n\n\n");
+	
 	
 	
 
