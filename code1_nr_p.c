@@ -7,7 +7,7 @@
 #include <time.h>
 #include "mt19937ar.c"
 
-#define  n 128
+#define  n 64
 
 #define tpie  2.0*M_PI
 
@@ -17,7 +17,7 @@ FILE *fppwspctrm;
 double G   = 1.0;
 double c   = 1.0;
 double Mpl ;
-double lenfac = 1e3;
+double lenfac = 2e4;
 double Hb0  ;
 double L[3];
 int tN;
@@ -961,12 +961,11 @@ void particle2mesh(struct particle * pp,int p_id,double *meshphi,double ap)
 }
 
 
-
 void slip_fft_cal()
 {    
 	 double kfac,tmp,tmptmp,Vvl,V_fvl;
 		
-	 int i,l1,l2,r1,r2,j;
+	 int i,l1,l2,r1,r2,j,mm;
 
 	double d1[3],d2[3];
 
@@ -998,10 +997,16 @@ void slip_fft_cal()
 		
 
 
-		l1 = ((n+ind_grid[i][j]-1)%n)*((int)(pow(n,2-j)));
-		l2 = ((n+ind_grid[i][j]-2)%n)*((int)(pow(n,2-j)));
-		r1 = ((n+ind_grid[i][j]+1)%n)*((int)(pow(n,2-j)));
-		r2 = ((n+ind_grid[i][j]+2)%n)*((int)(pow(n,2-j)));
+		l1 = i + ((n+ind_grid[i][j]-1)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
+		l2 = i + ((n+ind_grid[i][j]-2)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
+		r1 = i + ((n+ind_grid[i][j]+1)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
+		r2 = i + ((n+ind_grid[i][j]+2)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
+
+		//mm = ind_grid[i][j]*(pow(n,2-j));
+
+		//if((l1>tN)&&(l2<0))
+		//printf(":))))))\n");
+
 		
 		
 		phi_s[j][i] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(d1[j]);
@@ -1010,7 +1015,7 @@ void slip_fft_cal()
 		
 		
 		
-		LAPf[i] += (-f[l2]+16.0*f[l1]-30.0*f[i]+16.0*f[r1]-f[r2])/(d2[j]); 
+		LAPf[i] += ((-f[l2]+16.0*f[l1]-30.0*f[i]+16.0*f[r1]-f[r2])/d2[j]); 
 		
 		
 		
@@ -1019,8 +1024,8 @@ void slip_fft_cal()
 		
 		
 	     }
-  		
-
+  		//if(a==a_zels)
+		//fprintf(fplin,"%d\t%lf\n",i,pow(n,2));
 
 		
 
@@ -1038,7 +1043,7 @@ void slip_fft_cal()
 
 		
 	}
-
+	fprintf(fplin,"\n\n\n");
 	
 	fftw_execute(slip_plan_f);
 	//printf("yha tk\n");
@@ -1072,31 +1077,53 @@ void slip_fft_cal()
 		tmpslip1[i] = slip[i]; 
 		slip[i] = slip_cal[i][0]/n3sqrt ; 
 	//	if(((slip_cal[i][1]/slip_cal[i][0])>1e-8)&&(slip_cal[i][0]>1e-25))
-		{
+		//{
 	//		printf("\n !!! Slip cal imag components !!! \n");
 	//		fail = 0;
 			
-		}
+		//}
 
 		slip_a[i] = 0.5*(3.0*slip[i]-4.0*tmpslip1[i]+tmpslip2[i])/da; 
 
 
 
 		  LAPslip[i] = 0.0;
-	  
+	  	  
 	    
 	     for(j=0;j<3;++j)
 	     {	 
 		
 
 
-		l1 = ((n+ind_grid[i][j]-1)%n)*((int)(pow(n,2-j)));
-		l2 = ((n+ind_grid[i][j]-2)%n)*((int)(pow(n,2-j)));
-		r1 = ((n+ind_grid[i][j]+1)%n)*((int)(pow(n,2-j)));
-		r2 = ((n+ind_grid[i][j]+2)%n)*((int)(pow(n,2-j)));
+		l1 = i + ((n+ind_grid[i][j]-1)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
+		l2 = i + ((n+ind_grid[i][j]-2)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
+		r1 = i + ((n+ind_grid[i][j]+1)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
+		r2 = i + ((n+ind_grid[i][j]+2)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
+
 		
 		
+	/*	if(((ind_grid[l1][j]+1)%n)!=ind_grid[i][j])
+		{printf(":)))))) %d  %d %d %d\n",i,l1,((n+ind_grid[i][j]-1)%n)*((int)(pow(n,2-j))),ind_grid[i][j]);
+		  return;
+		}
+
+		if(((ind_grid[l2][j]+2)%n)!=ind_grid[i][j])
+		{printf(":)))))) %d  %d %d %d\n",i,l1,((n+ind_grid[i][j]-1)%n)*((int)(pow(n,2-j))),ind_grid[i][j]);
+		  return;
+		}
+
+
+		if(((n+ind_grid[r2][j]-2)%n)!=ind_grid[i][j])
+		{printf(":)))))) %d  %d %d %d\n",i,l1,((n+ind_grid[i][j]-1)%n)*((int)(pow(n,2-j))),ind_grid[i][j]);
+		  return;
+		}
+
+		if(((n+ind_grid[r1][j]-1)%n)!=ind_grid[i][j])
+		{printf(":)))))) %d  %d %d %d\n",i,l1,((n+ind_grid[i][j]-1)%n)*((int)(pow(n,2-j))),ind_grid[i][j]);
+		  return;
+		}
 		
+	*/	
 		slip_s[j][i] = (slip_cal[l2][0]-8.0*slip_cal[l1][0]+8.0*slip_cal[r1][0]-slip_cal[r2][0])/(n3sqrt*d1[j]); 
 		
 		
@@ -1104,12 +1131,12 @@ void slip_fft_cal()
 		
 		LAPslip[i] += (-slip_cal[l2][0]+16.0*slip_cal[l1][0]-30.0*slip_cal[i][0]+16.0*slip_cal[r1][0]-slip_cal[r2][0])/(n3sqrt*d2[j]); 
 	
-		V_fvl = V_f(f[i]);
-		Vvl = V(f[i]);
+		
+		
 
 		
-		tul00[i]+= (Vvl + 0.5*tmpf_a[i]*tmpf_a[i]*a_t*a_t*(1.0-2.0*(phi[i]-slip[i]))) -fb00 ;
-		tuldss[i]+= 3.0*((Vvl - 0.5*tmpf_a[i]*tmpf_a[i]*a_t*a_t*(1.0-2.0*(phi[i]-slip[i]))) -fbdss) ;
+		
+		tuldss[i]+=  0.5*(1.0+2.0*phi[i])*f_s[j][i]*f_s[j][i]/(ak*ak)  ;
 
 		
 		
@@ -1118,7 +1145,11 @@ void slip_fft_cal()
 		
 	     }
 
+		
+		Vvl = V(f[i]);
 
+
+		tuldss[i]+=3.0*(Vvl - 0.5*tmpf_a[i]*tmpf_a[i]*a_t*a_t*(1.0-2.0*(phi[i]-slip[i])) - fbdss);
 
 		
 	}
@@ -1169,10 +1200,12 @@ void cal_grd_tmunu()
 		
 
 
-		l1 = ((n+ind_grid[ci][j]-1)%n)*((int)(pow(n,2-j)));
-		l2 = ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j)));
-		r1 = ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j)));
-		r2 = ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j)));
+		l1 = ci + ((n+ind_grid[ci][j]-1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		l2 = ci + ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		r1 = ci + ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		r2 = ci + ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+
+		
 		
 		
 		phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(d1[j]);
@@ -1186,19 +1219,24 @@ void cal_grd_tmunu()
 
 		
 		
+		tuldss[ci]+=  0.5*(1.0+2.0*phi[ci])*f_s[j][ci]*f_s[j][ci]/(a*a)  ;
+
+		
+		
 
 		
 		
 	     }
 
-
-		V_fvl = V_f(f[ci]);
+		
 		Vvl = V(f[ci]);
+
+		tuldss[ci]+=3.0*(Vvl - 0.5*f_a[ci]*f_a[ci]*a_t*a_t*(1.0-2.0*(phi[ci]-slip[ci])) - fbdss);
+
+		
 
 
 		
-		tul00[ci]+=(Vvl + 0.5*f_a[ci]*f_a[ci]*a_t*a_t*(1.0-2.0*(phi[ci]-slip[ci])) -fb00) ;
-		tuldss[ci]+= 3.0*(Vvl - 0.5*f_a[ci]*f_a[ci]*a_t*a_t*(1.0-2.0*(phi[ci]-slip[ci])) -fbdss) ;
   		
 
 
@@ -1208,6 +1246,7 @@ void cal_grd_tmunu()
 
 
 }
+
 
 
 
@@ -1530,7 +1569,7 @@ void initialise()
 
 	kf = tpie*lenfac/(64.0);
 
-	dx[0] = 0.001; dx[1] =0.001; dx[2] = 0.001;
+	dx[0] = 0.2e-3; dx[1] =0.2e-3; dx[2] = 0.2e-3;
         L[0] = dx[0]*((double) (n));  L[1] = dx[1]*((double) (n));  L[2] = dx[2]*((double) (n));
 	dk = 0.01/dx[0]; kbins = 0;
 
@@ -1644,7 +1683,7 @@ void initialise()
 	cal_spectrum(ini_density_contrast,fppwspctrm_dc,1);
 
   
-	ini_displace_particle(0.1);
+	ini_displace_particle(0.0002);
 	background(1);
 
 	Vamp = Vamp*Hi*Hi; 
@@ -1941,18 +1980,17 @@ int evolve(double aini, double astp)
 		//				- 3.0*phi_a[ci]/a -phi_a[ci]/a - a_tt*phi_a[ci]/(a_t*a_t);
 
 		phiacc1[ci] = (a_t*a_t/(a*a) + 2.0*a_tt/a )*(slip[ci]-phi[ci])/(a_t*a_t) + (slip_a[ci]-4.0*phi_a[ci])/a + (1.0/3.0)*LAPslip[ci]/(a*a*a_t*a_t)
-				-(tuldss[ci]+0.5*LAPf[ci]*(1.0+2.0*phi[ci])/(a*a))/(6.0*Mpl*Mpl*a_t*a_t)   - a_tt*phi_a[ci]/(a_t*a_t);
+				-(tuldss[ci])/(6.0*Mpl*Mpl*a_t*a_t)   - a_tt*phi_a[ci]/(a_t*a_t);
 
 
 		V_fvl = V_f(f[ci]);
 		Vvl = V(f[ci]);
 	
 		facc1[ci] = ( V_fvl/(a_t*a_t) + 3.0*f_a[ci]/a - 3.0*f_a[ci]*phi_a[ci] - 6.0*(phi[ci]-slip[ci])*f_a[ci]/a 
-				- (phi_a[ci]-slip_a[ci])*f_a[ci] 
-				+(f_s[0][ci]*slip_s[0][ci]+f_s[1][ci]*slip_s[1][ci]+f_s[2][ci]*slip_s[2][ci] -LAPf[ci]*(1.0+2.0*phi[ci]))/(a*a*a_t*a_t) )
-			/(-1.0+2.0*(phi[ci]-slip[ci])) 
+				- (phi_a[ci]-slip_a[ci])*f_a[ci]
+				+(f_s[0][ci]*slip_s[0][ci]+f_s[1][ci]*slip_s[1][ci]+f_s[2][ci]*slip_s[2][ci])/(a*a*a_t*a_t*(-1.0+2.0*(phi[ci]-slip[ci]))) 
+					-(LAPf[ci]/a)*((1.0+2.0*phi[ci])/(-1.0+2.0*(phi[ci]-slip[ci])))/(a*a_t*a_t) )
 			-a_tt*f_a[ci]/(a_t*a_t); 
-
 		
 		
 
@@ -2094,7 +2132,7 @@ int evolve(double aini, double astp)
 		
 		phiacc2[ci] = (a_t*a_t/(ak*ak) + 2.0*a_tt/ak )*(slip[ci]-phi[ci])/(a_t*a_t) + (slip_a[ci]-4.0*tmpphi_a[ci])/ak 
 				+ (1.0/3.0)*LAPslip[ci]/(ak*ak*a_t*a_t)
-				-(tuldss[ci]+0.5*LAPf[ci]*(1.0+2.0*phi[ci])/(ak*ak))/(6.0*Mpl*Mpl*a_t*a_t)   - a_tt*tmpphi_a[ci]/(a_t*a_t);
+				-(tuldss[ci])/(6.0*Mpl*Mpl*a_t*a_t)   - a_tt*tmpphi_a[ci]/(a_t*a_t);
 
 
 		V_fvl = V_f(f[ci]);
@@ -2102,9 +2140,10 @@ int evolve(double aini, double astp)
 	
 		facc2[ci] = ( V_fvl/(a_t*a_t) + 3.0*tmpf_a[ci]/ak - 3.0*tmpf_a[ci]*tmpphi_a[ci] - 6.0*(phi[ci]-slip[ci])*tmpf_a[ci]/ak 
 				- (tmpphi_a[ci]-slip_a[ci])*tmpf_a[ci] 
-				+(f_s[0][ci]*slip_s[0][ci]+f_s[1][ci]*slip_s[1][ci]+f_s[2][ci]*slip_s[2][ci] -LAPf[ci]*(1.0+2.0*phi[ci]))/(ak*ak*a_t*a_t) )
-			/(-1.0+2.0*(phi[ci]-slip[ci])) 
-			-a_tt*tmpf_a[ci]/(a_t*a_t); 
+				+(f_s[0][ci]*slip_s[0][ci]+f_s[1][ci]*slip_s[1][ci]+f_s[2][ci]*slip_s[2][ci])/(ak*ak*a_t*a_t*(-1.0+2.0*(phi[ci]-slip[ci]))) 
+					-(LAPf[ci]/ak)*((1.0+2.0*phi[ci])/(-1.0+2.0*(phi[ci]-slip[ci])))/(ak*a_t*a_t) )
+					-a_tt*tmpf_a[ci]/(a_t*a_t); 
+
 
 
 
@@ -2157,7 +2196,7 @@ int evolve(double aini, double astp)
  //   printf("evolve w  %.10lf  Hi %.10lf  %.10lf  %.10lf\n",a_t,a,a0);
 
     if(fail!=1)
-    {//printf("fail  %d %d  %lf\n",fail,lcntr,a); 
+    {printf("fail  %d %d  %lf\n",fail,lcntr,a); 
 	return(fail);
     }    
 	
