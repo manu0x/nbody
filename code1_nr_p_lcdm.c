@@ -21,7 +21,7 @@ FILE *fppwspctrm;
 double G   = 1.0;
 double c   = 1.0;
 double Mpl ;
-double lenfac = 1e3;
+double lenfac = 2e4;
 double Hb0  ;
 double L[3];
 int tN;
@@ -1286,7 +1286,7 @@ void initialise()
 
 	kf = tpie*lenfac/(64.0);
 
-	dx[0] = 0.001; dx[1] =0.001; dx[2] = 0.001;
+	dx[0] = 0.2e-3; dx[1] =0.2e-3; dx[2] = 0.2e-3;
         L[0] = dx[0]*((double) (n));  L[1] = dx[1]*((double) (n));  L[2] = dx[2]*((double) (n));
 	dk = 0.01/dx[0]; kbins = 0;
 
@@ -1426,7 +1426,7 @@ void initialise()
 	cal_spectrum(ini_density_contrast,fppwspctrm_dc,1);
 
   
-	ini_displace_particle(0.1);
+	ini_displace_particle(0.0002);
 	backlin();
 
 	
