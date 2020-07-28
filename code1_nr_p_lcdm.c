@@ -140,13 +140,13 @@ void main()
 
 	
 	
-	fp_particles  = fopen("particles.txt","w");
+	
 	fpdc  = fopen("dc.txt","w");
 	fpback  = fopen("back.txt","w");
 	fppwspctrm_dc  = fopen("pwspctrm_dc2.txt","w");
 	fppwspctrm_phi  = fopen("pwspctrm_phi.txt","w");
 	fpphi = fopen("phi.txt","w");
-	fp_fields = fopen("fields.txt","w");
+	
 	fplinscale = fopen("linscale.txt","w");
 	fplin = fopen("lpt.txt","w");
 
@@ -956,10 +956,9 @@ void cal_grd_tmunu(int k)
 		
 
 
-		l1 = ((n+ind_grid[ci][j]-1)%n)*((int)(pow(n,2-j)));
-		l2 = ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j)));
-		r1 = ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j)));
-		r2 = ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j)));
+		l1 = ci + ((n+ind_grid[ci][j]-1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		l2 = ci + ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		r1 = ci + ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 		
 		
 		phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(12.0*dx[j]);
@@ -1011,10 +1010,9 @@ void cal_grd_tmunu(int k)
 		
 
 
-		l1 = ((n+ind_grid[ci][j]-1)%n)*((int)(pow(n,2-j)));
-		l2 = ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j)));
-		r1 = ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j)));
-		r2 = ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j)));
+		l1 = ci + ((n+ind_grid[ci][j]-1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		l2 = ci + ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		r1 = ci + ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 		
 		
 		phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(12.0*dx[j]);
@@ -1231,7 +1229,16 @@ void backlin()
 void write_fields()
 {
 	int i;
-	double f_dc,f_prsr, f_denst,back_f_denst;
+
+	char name_p[20],name_f[20];
+	double f_dc,f_prsr, f_denst,back_f_denst,zaw;
+	zaw = a0/a - 1.0;
+
+	snprintf(name_p,20,"lcd_prtcls_z_%lf",zaw);
+	snprintf(name_f,20,"lcd_fields_z_%lf",zaw);
+
+	fp_particles  = fopen(name_p,"w");
+	fp_fields = fopen(name_f,"w");
 
 
 	for(i=0;i<tN;++i)
@@ -1247,8 +1254,8 @@ void write_fields()
 
 	}
 
-	fprintf(fp_fields,"\n\n\n");
-	fprintf(fp_particles,"\n\n\n");
+	fclose(fp_fields);
+	fclose(fp_particles);
 
 
 }

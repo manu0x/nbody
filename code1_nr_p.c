@@ -156,13 +156,13 @@ void main()
 
 	
 	
-	fp_particles  = fopen("particles.txt","w");
+	
 	fpdc  = fopen("dc.txt","w");
 	fpback  = fopen("back.txt","w");
 	fppwspctrm_dc  = fopen("pwspctrm_dc2.txt","w");
 	fppwspctrm_phi  = fopen("pwspctrm_phi.txt","w");
 	fpphi = fopen("phi.txt","w");
-	fp_fields = fopen("fields.txt","w");
+	
 	fplinscale = fopen("linscale.txt","w");
 	fplin = fopen("lpt.txt","w");
 
@@ -1511,11 +1511,20 @@ void background(int bk)
 void write_fields()
 {
 	int i;
-	double f_dc,f_prsr, f_denst, Vvl, Vvlb,back_f_denst;
+	char name_p[20],name_f[20];
+	double f_dc,f_prsr, f_denst, Vvl, Vvlb,back_f_denst,zaw;
 
 	Vvlb = V(fb);
 
+	zaw = a0/a - 1.0;
+
 	back_f_denst = (0.5*fb_a*a_t*fb_a*a_t + Vvlb);
+
+	snprintf(name_p,20,"prtcls_z_%lf",zaw);
+	snprintf(name_f,20,"fields_z_%lf",zaw);
+
+	fp_particles  = fopen(name_p,"w");
+	fp_fields = fopen(name_f,"w");
 
 	for(i=0;i<tN;++i)
 	{
@@ -1538,8 +1547,8 @@ void write_fields()
 
 	}
 
-	fprintf(fp_fields,"\n\n\n");
-	fprintf(fp_particles,"\n\n\n");
+	fclose(fp_fields);
+	fclose(fp_particles);
 
 }
 

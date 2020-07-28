@@ -141,13 +141,13 @@ void main()
 
 	
 	
-	fp_particles  = fopen("particles.txt","w");
+	
 	fpdc  = fopen("dc.txt","w");
 	fpback  = fopen("back.txt","w");
 	fppwspctrm_dc  = fopen("pwspctrm_dc2.txt","w");
 	fppwspctrm_phi  = fopen("pwspctrm_phi.txt","w");
 	fpphi = fopen("phi.txt","w");
-	fp_fields = fopen("fields.txt","w");
+	
 	fplinscale = fopen("linscale.txt","w");
 	fplin = fopen("lpt.txt","w");
 
@@ -959,10 +959,10 @@ void cal_grd_tmunu(int k)
 		
 
 
-		l1 = ((n+ind_grid[ci][j]-1)%n)*((int)(pow(n,2-j)));
-		l2 = ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j)));
-		r1 = ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j)));
-		r2 = ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j)));
+		l1 = ci + ((n+ind_grid[ci][j]-1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		l2 = ci + ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		r1 = ci + ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		r2 = ci + ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 		
 		
 		phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(12.0*dx[j]);
@@ -981,13 +981,14 @@ void cal_grd_tmunu(int k)
   		
 
 		
-		V_fvl = V_f(f[ci]);
+		
 		Vvl = V(f[ci]);
 
 
 		
-		tul00[ci]+= (Vvl + 0.5*tmpf_a[ci]*tmpf_a[ci]*a_t*a_t*(1.0-2.0*phi[ci])) -fb00 ;
-		tuldss[ci]+= 3.0*((Vvl - 0.5*tmpf_a[ci]*tmpf_a[ci]*a_t*a_t*(1.0-2.0*phi[ci])) -fbdss) ;
+		
+		
+		tuldss[ci]+=3.0*(Vvl - 0.5*f_a[ci]*f_a[ci]*a_t*a_t*(1.0-2.0*phi[ci]) - fbdss);
 
 
 
@@ -1016,10 +1017,9 @@ void cal_grd_tmunu(int k)
 		
 
 
-		l1 = ((n+ind_grid[ci][j]-1)%n)*((int)(pow(n,2-j)));
-		l2 = ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j)));
-		r1 = ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j)));
-		r2 = ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j)));
+		l1 = ci + ((n+ind_grid[ci][j]-1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		l2 = ci + ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		r1 = ci + ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 		
 		
 		phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(12.0*dx[j]);
@@ -1315,11 +1315,20 @@ void background(int bk)
 void write_fields()
 {
 	int i;
-	double f_dc,f_prsr, f_denst, Vvl, Vvlb,back_f_denst;
+	char name_p[20],name_f[20];
+	double f_dc,f_prsr, f_denst, Vvl, Vvlb,back_f_denst,zaw;
 
 	Vvlb = V(fb);
 
+	zaw = a0/a - 1.0;
+
 	back_f_denst = (0.5*fb_a*a_t*fb_a*a_t + Vvlb);
+
+	snprintf(name_p,20,"lin_prtcls_z_%lf",zaw);
+	snprintf(name_f,20,"lin_fields_z_%lf",zaw);
+
+	fp_particles  = fopen(name_p,"w");
+	fp_fields = fopen(name_f,"w");
 
 	for(i=0;i<tN;++i)
 	{
@@ -1342,8 +1351,8 @@ void write_fields()
 
 	}
 
-	fprintf(fp_fields,"\n\n\n");
-	fprintf(fp_particles,"\n\n\n");
+	fclose(fp_fields);
+	fclose(fp_particles);
 
 }
 
