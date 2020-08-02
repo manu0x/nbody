@@ -327,11 +327,11 @@ void cal_dc()
 	
 
 
-	#pragma omp parallel for private(j,lapphi_loc,l1,l2,r1,r2,Vvl)
+	#pragma omp parallel for private(j,lapphi_loc,t00f_loc,l1,l2,r1,r2,Vvl)
   	for(i=0;i<tN;++i)
     	{	
 	  lapphi_loc = 0.0;
-
+	  t00f_loc = 0.0;
 
 
 
@@ -364,7 +364,7 @@ void cal_dc()
 	
 		
 		
-		t00f_loc+=  0.5*(1.0+2.0*phi[i])*f_s[j][i]*f_s[j][i]/(a*a)  ;
+		
 
 		
 		

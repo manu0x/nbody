@@ -934,7 +934,7 @@ void particle2mesh(struct particle * pp,int p_id,double *meshphi,double ap)
 
 void cal_grd_tmunu(int k)
 {
-	int ci,l1,l2,r1,r2,j,Vvl,V_fvl;
+	int ci,l1,l2,r1,r2,j;
 
  	if(k==1)
 	{
@@ -959,6 +959,7 @@ void cal_grd_tmunu(int k)
 		l1 = ci + ((n+ind_grid[ci][j]-1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 		l2 = ci + ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 		r1 = ci + ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		r2 = ci + ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 		
 		
 		phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(12.0*dx[j]);
@@ -1013,6 +1014,7 @@ void cal_grd_tmunu(int k)
 		l1 = ci + ((n+ind_grid[ci][j]-1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 		l2 = ci + ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 		r1 = ci + ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		r2 = ci + ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 		
 		
 		phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(12.0*dx[j]);
@@ -1502,8 +1504,7 @@ void initialise()
 
 	cal_dc_fr_particles();
 	
-	cal_spectrum(ini_density_contrast,fppwspctrm_dc,1);
-	a = a_zels;
+	
 
 	  a_t = Hi*sqrt(ommi*ai*ai*ai/(a)  + (1.0-ommi)*a*a ) ; 
        
