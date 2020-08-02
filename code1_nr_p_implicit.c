@@ -2124,14 +2124,14 @@ int evolve(double aini, double astp)
 	#pragma omp parallel for private(v,gamma,phiavg,phi_aavg,phi_savg,slip_savg,fsg,anchor,i,vmagsqr,Vvl,V_fvl)
 	 for(ci=0;ci<tN;++ci)
 	  {
-		/*	vmagsqr = 0.0;	
+			//vmagsqr = 0.0;	
 
 		
 		//phiavg = mesh2particle(p,ci,phi);
 		
 		//phi_aavg = mesh2particle(p,ci,tmpphi_a);
 		
-		fsg = 0.0;
+		//fsg = 0.0;
 		for(i=0;i<3;++i)
 		{	//phi_savg[i] = mesh2particle(tmpp,ci,&phi_s[i][0]);
 			slip_savg[i] = mesh2particle(p,ci,&slip_s[i][0]);
@@ -2153,13 +2153,13 @@ int evolve(double aini, double astp)
 				 -phi_savg[i]/(ak*ak))/(a_t*a_t) - a_tt*tmpp[ci].v[i]/(a_t*a_t);
 		*/
 			
-	/*		p[ci].v[i] = p[ci].v[i] + 0.5*da*(pacc1[ci][i]+pacc2[ci][i]); 
+			p[ci].v[i] = p[ci].v[i] + 0.5*da*(pacc1[ci][i]+pacc2[ci][i]); 
 
 		}			
 		
 
 
-	*/		
+		
 /////////////////////phi  acceleration calculation Final/////////////////////////////////////////////////////////////////////////////////
 		
 		phiacc2[ci] = (a_t*a_t/(ak*ak) + 2.0*a_tt/ak )*(slip[ci]-phi[ci])/(a_t*a_t) + (slip_a[ci]-4.0*tmpphi_a[ci])/ak 

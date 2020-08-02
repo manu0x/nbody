@@ -155,14 +155,14 @@ void main()
 	
 	
 	
-	fpdc  = fopen("dc.txt","w");
-	fpback  = fopen("back.txt","w");
-	fppwspctrm_dc  = fopen("pwspctrm_dc2.txt","w");
-	fppwspctrm_phi  = fopen("pwspctrm_phi.txt","w");
-	fpphi = fopen("phi.txt","w");
+	fpdc  = fopen("lin_dc.txt","w");
+	fpback  = fopen("lin_back.txt","w");
+	fppwspctrm_dc  = fopen("lin_pwspctrm_dc2.txt","w");
+	fppwspctrm_phi  = fopen("lin_pwspctrm_phi.txt","w");
+	fpphi = fopen("lin_phi.txt","w");
 	
-	fplinscale = fopen("linscale.txt","w");
-	fplin = fopen("lpt.txt","w");
+	fplinscale = fopen("lin_linscale.txt","w");
+	fplin = fopen("lin_lpt.txt","w");
 
 
         int i;
@@ -1527,8 +1527,7 @@ void initialise()
 
 	cal_dc_fr_particles();
 	
-	cal_spectrum(ini_density_contrast,fppwspctrm_dc,1);
-	a = a_zels;
+
 
 	cal_grd_tmunu(0);
 
