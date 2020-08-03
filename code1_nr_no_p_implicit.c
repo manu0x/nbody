@@ -273,11 +273,11 @@ void cal_spectrum(double *spcmesh,FILE *fspwrite,int isini)
 
 	for(i=0;i<tN;++i)
 	{
-		if(isini==1)
+		//if(isini==1)
 		pwspctrm[kmagrid[i]]+=  (Fdens_cntrst[i][1]*Fdens_cntrst[i][1] + Fdens_cntrst[i][0]*Fdens_cntrst[i][0])/(n*n*n);
-		else
-		pwspctrm[kmagrid[i]]+=  ((Fdens_cntrst[i][1]*Fdens_cntrst[i][1] + Fdens_cntrst[i][0]*Fdens_cntrst[i][0]))
-														/(n*n*n*W_cic[i]*W_cic[i]);
+		//else
+		//pwspctrm[kmagrid[i]]+=  ((Fdens_cntrst[i][1]*Fdens_cntrst[i][1] + Fdens_cntrst[i][0]*Fdens_cntrst[i][0]))
+		//												/(n*n*n*W_cic[i]*W_cic[i]);
 
 	}
 	
@@ -336,7 +336,8 @@ double ini_power_spec(double kamp)
 void cal_dc()
 {
 
-	int i,j,k,lapphi_loc,t00f_loc,l1,l2,r1,r2,Vvl;
+	int i,j,k,l1,l2,r1,r2;
+	double lapphi_loc,t00f_loc,Vvl;
 	
 
 	
@@ -988,8 +989,8 @@ void initialise()
         L[0] = dx[0]*((double) (n));  L[1] = dx[1]*((double) (n));  L[2] = dx[2]*((double) (n));
 	dk = 0.01/dx[0]; kbins = 0;
 	
-	ini_rand_field();
-	//  read_ini_rand_field();
+	//ini_rand_field();
+	  read_ini_rand_field();
         
 	for(ci = 0;ci <tN; ++ci)
 	{

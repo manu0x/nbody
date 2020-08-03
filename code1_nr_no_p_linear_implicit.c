@@ -127,7 +127,7 @@ void main()
 
         da = 1e-5;
         jprint = (int) (0.001/da);
-	jprints = jprint*100;
+	jprints = jprint*200;
 	
 	tN=n*n*n;
 	n3sqrt = sqrt((double) tN);
@@ -242,7 +242,7 @@ void cal_spectrum(double *spcmesh,FILE *fspwrite,int isini)
 		pwspctrm[i] = 0.0;
 	}
 
-	fftw_plan_with_nthreads(4);
+	
 	spec_plan = fftw_plan_dft_3d(n,n,n, dens_cntrst, Fdens_cntrst, FFTW_FORWARD, FFTW_ESTIMATE);
 	fftw_execute(spec_plan);
 	fftw_free(dens_cntrst);
@@ -255,11 +255,11 @@ void cal_spectrum(double *spcmesh,FILE *fspwrite,int isini)
 
 	for(i=0;i<tN;++i)
 	{
-		if(isini==1)
+		//if(isini==1)
 		pwspctrm[kmagrid[i]]+=  (Fdens_cntrst[i][1]*Fdens_cntrst[i][1] + Fdens_cntrst[i][0]*Fdens_cntrst[i][0])/(n*n*n);
-		else
-		pwspctrm[kmagrid[i]]+=  ((Fdens_cntrst[i][1]*Fdens_cntrst[i][1] + Fdens_cntrst[i][0]*Fdens_cntrst[i][0]))
-														/(n*n*n*W_cic[i]*W_cic[i]);
+		//else
+		//pwspctrm[kmagrid[i]]+=  ((Fdens_cntrst[i][1]*Fdens_cntrst[i][1] + Fdens_cntrst[i][0]*Fdens_cntrst[i][0]))
+		//												/(n*n*n*W_cic[i]*W_cic[i]);
 
 	}
 	
@@ -269,8 +269,9 @@ void cal_spectrum(double *spcmesh,FILE *fspwrite,int isini)
 		if(kbincnt[i]!=0)
 	        {  delta_pw = sqrt(pwspctrm[i]*i*i*i*dk*dk*dk/(2.0*M_PI*M_PI*kbincnt[i]))*ai/a;  
 
-		   fprintf(fspwrite,"%lf\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",a/ai,i*dk,pwspctrm[i]/(kbincnt[i]),pwspctrm[i]*ai*ai/(kbincnt[i]*a*a),
-										delta_pw,W_cic[i]);
+		   fprintf(fspwrite,"%lf\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
+							a/ai,i*dk,pwspctrm[i]/(kbincnt[i]),pwspctrm[i]*ai*ai/(kbincnt[i]*a*a),
+							pwspctrm[i]/(kbincnt[i]*lin_growth),delta_pw*ai/a,delta_pw/lin_growth,W_cic[i]);
 
 		}
 
@@ -316,7 +317,8 @@ double ini_power_spec(double kamp)
 void cal_dc()
 {
 
-	int i,j,k,lapphi_loc,t00f_loc,l1,l2,r1,r2,Vvl;
+	int i,j,k,l1,l2,r1,r2;
+	double lapphi_loc,t00f_loc,Vvl;
 	
 
 	
