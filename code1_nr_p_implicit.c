@@ -307,7 +307,7 @@ void cal_spectrum(double *spcmesh,FILE *fspwrite,int isini)
 
 		   fprintf(fspwrite,"%lf\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
 							a/ai,i*dk,pwspctrm[i]/(kbincnt[i]),pwspctrm[i]*ai*ai/(kbincnt[i]*a*a),
-							pwspctrm[i]/(kbincnt[i]*lin_growth),delta_pw*ai/a,delta_pw/lin_growth,W_cic[i]);
+							pwspctrm[i]/(kbincnt[i]*lin_growth*lin_growth),delta_pw*ai/a,delta_pw/lin_growth,W_cic[i]);
 
 		}
 
