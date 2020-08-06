@@ -997,7 +997,7 @@ void particle2mesh(struct particle * pp,int p_id,double aloc)
 			
 		
 		tul00[k]  += m*del[i]*gamma*(1.0+4.0*phi[i]-sliploc-gamma*gamma*(vmgsqr*ak*ak*phi[i]+phi[i]-sliploc))/a3;
-		tuldss[k]  += m*del[i]*gamma*(1.0+sliploc-gamma*gamma*(vmgsqr*ak*ak*phi[i]+phi[i]-sliploc))/aloc;
+		tuldss[k]  += m*del[i]*gamma*vmgsqr*(1.0+sliploc-gamma*gamma*(vmgsqr*ak*ak*phi[i]+phi[i]-sliploc))/aloc;
 		
 		
 	}	
@@ -1690,7 +1690,7 @@ void slip_fft_cal()
 	#pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl)
 	for(i=0;i<tN;++i)
 	{
-		//particle2mesh(tmpp,i,ak);
+		particle2mesh(tmpp,i,ak);
 
 		tmpslip2[i] = tmpslip1[i];
 		tmpslip1[i] = slip[i]; 
@@ -1777,7 +1777,7 @@ void cal_grd_tmunu()
 	 #pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl,fl)
 	  for(ci=0;ci<tN;++ci)
 	   {
-	    //particle2mesh(p,ci,a);
+	    particle2mesh(p,ci,a);
 
 	    
 
