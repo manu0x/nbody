@@ -1326,7 +1326,7 @@ void initialise()
 			if((xcntr[j]%n)<=(n/2))
 				{
 					
-				 k_grid[ci][j] = (xcntr[j]%n)/L[j];
+				 k_grid[ci][j] = ((double)(xcntr[j]%n))/L[j];
 
 				  ktmp+= k_grid[ci][j]*k_grid[ci][j];
 
@@ -1340,7 +1340,7 @@ void initialise()
 				}
 			else
 				{ 
-				 k_grid[ci][j] = ((xcntr[j]%n)-n)/L[j];
+				 k_grid[ci][j] = ((double)((xcntr[j]%n)-n))/L[j];
 
 				 ktmp+= k_grid[ci][j]*k_grid[ci][j];
 
