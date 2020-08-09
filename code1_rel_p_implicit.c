@@ -1762,14 +1762,14 @@ void cal_grd_tmunu()
 	int ci,l1,l2,r1,r2,j,Vvl,V_fvl,fl;
 	double d1[3],d2[3];
 
-	//for(j=0;j<3;++j)
-	//{
-	//	d1[j] = 12.0*dx[j];
-	//	d2[j] = 12.0*dx[j]*dx[j];
+	for(j=0;j<3;++j)
+	{
+		d1[j] = 12.0*dx[j];
+		d2[j] = 12.0*dx[j]*dx[j];
 
-	//} 
+	} 
 
- 
+ 	
 
 
 
@@ -1791,9 +1791,18 @@ void cal_grd_tmunu()
 	     {	 
 		
 
+		l1 = ci + ((n+ind_grid[ci][j]-1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		l2 = ci + ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		r1 = ci + ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+		r2 = ci + ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 
+		
+		
+		
+		phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(d1[j]);
+		f_s[j][ci] = (f[l2]-8.0*f[l1]+8.0*f[r1]-f[r2])/(d1[j]); 
 
-
+		
 		
 
 
