@@ -1370,7 +1370,7 @@ int evolve(double aini, double astp)
 		 omfb = (1.0/(3.0*c*c*c*Mpl*Mpl))*(fb_a*fb_a*a_t*a_t/(2.0*c*c) + Vvlb);
 
 		fprintf(fpback,"%lf\t%.10lf\t%.10lf\n",a/ai,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t),omfb*a*a/(a_t*a_t));
-		fprintf(fplin,"%lf\t%.20lf\t%.20lf\n",a/ai,lin_growth,a/ai);
+		fprintf(fplin,"%lf\t%.20lf\t%.20lf\n",a/ai,lin_growth,lin_phi);
 
 		printf("a  %lf %.10lf  %.10lf\n",a,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t),omfb);
 
@@ -1383,7 +1383,7 @@ int evolve(double aini, double astp)
 
 		 cal_dc();
       		 cal_spectrum(density_contrast,fppwspctrm_dc,0);
-		// cal_spectrum(phi,fppwspctrm_phi,0);
+		 cal_spectrum(phi,fppwspctrm_phi,0);
 		 write_fields();
 
 
