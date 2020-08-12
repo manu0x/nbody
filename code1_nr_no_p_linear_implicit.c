@@ -1183,7 +1183,8 @@ void initialise()
 
 void cal_grd_tmunu(int k)
 {
-	int ci,l1,l2,r1,r2,j,Vvl,V_fvl,fl;
+	int ci,l1,l2,r1,r2,j;
+	double Vvl,V_fvl,fl;
 
 	
 
@@ -1390,7 +1391,7 @@ int evolve(double aini, double astp)
 	  }
 
 /////////////////////////////////particle force calculation*****Step 1////////////////////////////////////////////////		 
-	#pragma omp parallel for private(i,kfac2)
+	#pragma omp parallel for private(i,kfac2,Vvl,V_fvl)
 	 for(ci=0;ci<tN;++ci)
 	  {
 		
@@ -1518,7 +1519,7 @@ int evolve(double aini, double astp)
 	  
 
 	 
-	#pragma omp parallel for private(i)
+	#pragma omp parallel for private(i,Vvl,V_fvl)
 	 for(ci=0;ci<tN;++ci)
 	  {
 		

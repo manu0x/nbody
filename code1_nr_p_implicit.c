@@ -1721,7 +1721,8 @@ void slip_fft_cal()
 
 void cal_grd_tmunu()
 {
-	int ci,l1,l2,r1,r2,j,Vvl,V_fvl,fl;
+	int ci,l1,l2,r1,r2,j;
+	double Vvl,V_fvl,fl;
 	double d1[3],d2[3];
 
 	for(j=0;j<3;++j)

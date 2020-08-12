@@ -937,7 +937,8 @@ void particle2mesh(struct particle * pp,int p_id,double *meshphi,double ap)
 
 void cal_grd_tmunu(int k)
 {
-	int ci,l1,l2,r1,r2,j,Vvl,V_fvl;
+	int ci,l1,l2,r1,r2,j;
+	double Vvl,V_fvl;
 
  	if(k==1)
 	{
@@ -1738,7 +1739,7 @@ int evolve(double aini, double astp)
 	  }
 
 /////////////////////////////////particle force calculation*****Step 1////////////////////////////////////////////////		 
-	#pragma omp parallel for private(v,gamma,phiavg,phi_aavg,phi_savg,fsg,anchor,i,vmagsqr)
+	#pragma omp parallel for private(v,gamma,phiavg,phi_aavg,phi_savg,fsg,anchor,i,vmagsqr,Vvl,V_fvl)
 	 for(ci=0;ci<tN;++ci)
 	  {
 			//vmagsqr = 0.0;	
@@ -1936,7 +1937,7 @@ int evolve(double aini, double astp)
 	  
 
 	 
-	#pragma omp parallel for private(v,gamma,phiavg,phi_aavg,phi_savg,fsg,anchor,i,vmagsqr)
+	#pragma omp parallel for private(v,gamma,phiavg,phi_aavg,phi_savg,fsg,anchor,i,vmagsqr,Vvl,V_fvl)
 	 for(ci=0;ci<tN;++ci)
 	  {
 			//vmagsqr = 0.0;	
