@@ -1655,9 +1655,9 @@ void cal_grd_tmunu(int k)
 		fl = ( V_fvl/(a_t*a_t) + 3.0*f_a[ci]/a - 3.0*f_a[ci]*phi_a[ci] - 6.0*(phi[ci])*f_a[ci]/a 
 				- (phi_a[ci])*f_a[ci]
 			)/(-1.0+2.0*(phi[ci]))
-			-a_tt*f_a[ci]/(a_t*a_t)  -2.0*(LAPf[ci]/a)*(2.0*phi[ci])/(a*a_t*a_t)  ; 
+			-a_tt*f_a[ci]/(a_t*a_t)  + 2.0*(LAPf[ci]/a)*(2.0*phi[ci])/(a*a_t*a_t)  ; 
 
-		scf_rhs[ci][0] = f[ci] + da*f_a[ci]*a_t + 0.5*da*da*fl;	
+		scf_rhs[ci][0] = f[ci] + da*f_a[ci] + 0.5*da*da*fl;	
 		scf_rhs[ci][1] = 0.0;
 
 
