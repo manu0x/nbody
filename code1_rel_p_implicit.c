@@ -787,6 +787,7 @@ void ini_rand_field()
 void ini_displace_particle(double thres)
 {	double ds,maxv,dist,mind;
 	int i,ci,k,ngp,j;
+	maxv = 0.0;
   
 	 for(ci=0;ci<tN;++ci)
 	  {
@@ -1579,7 +1580,7 @@ void initialise()
 
 void slip_fft_cal()
 {    
-	 double kfac,kfac2,tmp,tmptmp,Vvl,V_fvl,gamma,vsqr;
+	 double kfac,kfac2,tmp,tmptmp,Vvl,V_fvl,gamma,vsqr,m[3];
 		
 	 int i,l1,l2,r1,r2,j,mm;
 
@@ -1596,7 +1597,7 @@ void slip_fft_cal()
 	} 
 
 
-	 #pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl,gamma,vsqr)
+	 #pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl,gamma,vsqr,m)
 	
 	for(i=0;i<tN;++i)
 	{
@@ -1624,14 +1625,27 @@ void slip_fft_cal()
 		//printf(":))))))\n");
 
 		
+
+		m[0] = (-8.0*scf_rhs[l1][0]+8.0*scf_rhs[r1][0]); 
+		m[1] = (scf_rhs[l2][0]-scf_rhs[r2][0]);
+		m[2] = m[0] + m[1] ;
 		
-		f_s[j][i] = (scf_rhs[l2][0]-8.0*scf_rhs[l1][0]+8.0*scf_rhs[r1][0]-scf_rhs[r2][0])/(n3sqrt*d1[j]); 
+		
+		f_s[j][i] = m[2]/(n3sqrt*d1[j]);
+
+
+		
+		
+		//f_s[j][i] = (scf_rhs[l2][0]-8.0*scf_rhs[l1][0]+8.0*scf_rhs[r1][0]-scf_rhs[r2][0])/(n3sqrt*d1[j]); 
+		
+		m[0] = (16.0*scf_rhs[l1][0]+16.0*scf_rhs[r1][0]); 
+		m[1] = (-scf_rhs[l2][0]-scf_rhs[r2][0]);
+		m[2] = m[0] + m[1] -30.0*scf_rhs[i][0];
+		LAPf[i]+= (m[2]/(n3sqrt*d2[j]));
 		
 		
 		
-		
-		
-		LAPf[i] += (-scf_rhs[l2][0]+16.0*scf_rhs[l1][0]-30.0*scf_rhs[i][0]+16.0*scf_rhs[r1][0]-scf_rhs[r2][0])/(n3sqrt*d2[j]); 
+		//LAPf[i] += (-scf_rhs[l2][0]+16.0*scf_rhs[l1][0]-30.0*scf_rhs[i][0]+16.0*scf_rhs[r1][0]-scf_rhs[r2][0])/(n3sqrt*d2[j]); 
 	
 		
 		
@@ -1687,7 +1701,7 @@ void slip_fft_cal()
 
 	fftw_execute(slip_plan_b);
 	
-	#pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl)
+	#pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl,m)
 	for(i=0;i<tN;++i)
 	{
 		particle2mesh(tmpp,i,ak);
@@ -1719,13 +1733,16 @@ void slip_fft_cal()
 		r2 = i + ((n+ind_grid[i][j]+2)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
 
 		
-		
+		m[0] = (16.0*slip_rhs[l1][0]+16.0*slip_rhs[r1][0]); 
+		m[1] = (-slip_rhs[l2][0]-slip_rhs[r2][0]);
+		m[2] = m[0] + m[1] -30.0*slip_rhs[i][0];
+		LAPslip[i]+= (m[2]/(n3sqrt*d2[j]));
 	
 
 		
 		
 		
-		LAPslip[i] += (-slip_rhs[l2][0]+16.0*slip_rhs[l1][0]-30.0*slip_rhs[i][0]+16.0*slip_rhs[r1][0]-slip_rhs[r2][0])/(n3sqrt*d2[j]); 
+		//LAPslip[i] += (-slip_rhs[l2][0]+16.0*slip_rhs[l1][0]-30.0*slip_rhs[i][0]+16.0*slip_rhs[r1][0]-slip_rhs[r2][0])/(n3sqrt*d2[j]); 
 		
 		
 		tuldss[i]+=  0.5*(1.0+2.0*phi[i])*f_s[j][i]*f_s[j][i]/(ak*ak)  ;
@@ -1760,7 +1777,7 @@ void slip_fft_cal()
 void cal_grd_tmunu()
 {
 	int ci,l1,l2,r1,r2,j;
-	double Vvl,V_fvl,fl;
+	double Vvl,V_fvl,fl,m[3];
 	double d1[3],d2[3];
 
 	for(j=0;j<3;++j)
@@ -1775,7 +1792,7 @@ void cal_grd_tmunu()
 
 
 
-	 #pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl,fl)
+	 #pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl,fl,m)
 	  for(ci=0;ci<tN;++ci)
 	   {
 	    particle2mesh(p,ci,a);
@@ -1797,11 +1814,26 @@ void cal_grd_tmunu()
 		r1 = ci + ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 		r2 = ci + ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 
+		m[0] = (-8.0*phi[l1]+8.0*phi[r1]); 
+		m[1] = (phi[l2]-phi[r2]);
+		m[2] = m[0] + m[1] ;
+		
+		
+		phi_s[j][ci] = m[2]/(d1[j]);
+
+		m[0] = (-8.0*f[l1]+8.0*f[r1]); 
+		m[1] = (f[l2]-f[r2]);
+		m[2] = m[0] + m[1] ;
+		
+		
+		f_s[j][ci] = m[2]/(d1[j]);
+
+
 		
 		
 		
-		phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(d1[j]);
-		f_s[j][ci] = (f[l2]-8.0*f[l1]+8.0*f[r1]-f[r2])/(d1[j]); 
+		//phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(d1[j]);
+		//f_s[j][ci] = (f[l2]-8.0*f[l1]+8.0*f[r1]-f[r2])/(d1[j]); 
 
 		
 		

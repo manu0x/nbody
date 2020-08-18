@@ -746,6 +746,7 @@ void ini_rand_field()
 void ini_displace_particle(double thres)
 {	double ds,maxv,dist,mind;
 	int i,ci,k,ngp,j;
+	maxv = 0.0;
   
 	 for(ci=0;ci<tN;++ci)
 	  {
@@ -937,9 +938,11 @@ void cal_grd_tmunu(int k)
 {
 	int ci,l1,l2,r1,r2,j;
 
+	double m[3];
+
  	if(k==1)
 	{
-	#pragma omp parallel for private(j,l1,l2,r1,r2)
+	#pragma omp parallel for private(j,l1,l2,r1,r2,m)
 	  for(ci=0;ci<tN;++ci)
 	   {
 	  //  particle2mesh(tmpp,ci,tmpphi,a);
@@ -961,13 +964,25 @@ void cal_grd_tmunu(int k)
 		l2 = ci + ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 		r1 = ci + ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 		r2 = ci + ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+
+		m[0] = (-8.0*phi[l1]+8.0*phi[r1]); 
+		m[1] = (phi[l2]-phi[r2]);
+		m[2] = m[0] + m[1] ;
 		
 		
-		phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(12.0*dx[j]);
-		//f_s[j][ci] = (tmpf[l2]-8.0*tmpf[l1]+8.0*tmpf[r1]-tmpf[r2])/(12.0*dx[j]); 
+		phi_s[j][ci] = m[2]/(12.0*dx[j]);
+
+	
 		
 		
 		//LAPphi[ci] += (-tmpphi[l2]+16.0*tmpphi[l1]-30.0*tmpphi[ci]+16.0*tmpphi[r1]-tmpphi[r2])/(12.0*dx[j]*dx[j]);
+		
+		
+		
+		//phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(12.0*dx[j]);
+		
+		
+	
 		
 
 		
@@ -995,7 +1010,7 @@ void cal_grd_tmunu(int k)
 
 	else
 	{
-	 #pragma omp parallel for private(j,l1,l2,r1,r2)
+	 #pragma omp parallel for private(j,l1,l2,r1,r2,m)
 	  for(ci=0;ci<tN;++ci)
 	   {
 	   //particle2mesh(p,ci,phi,a);
@@ -1003,8 +1018,7 @@ void cal_grd_tmunu(int k)
 	    
 
 	   
-	    //LAPphi[ci] = 0.0;
-	    LAPf[ci] = 0.0;
+	  
 	  
 	    
 	     for(j=0;j<3;++j)
@@ -1018,13 +1032,15 @@ void cal_grd_tmunu(int k)
 		r2 = ci + ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 		
 		
-		phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(12.0*dx[j]);
-		//f_s[j][ci] = (f[l2]-8.0*f[l1]+8.0*f[r1]-f[r2])/(12.0*dx[j]); 
+		m[0] = (-8.0*phi[l1]+8.0*phi[r1]); 
+		m[1] = (phi[l2]-phi[r2]);
+		m[2] = m[0] + m[1] ;
 		
 		
-		//LAPphi[ci] += (-phi[l2]+16.0*phi[l1]-30.0*phi[ci]+16.0*phi[r1]-phi[r2])/(12.0*dx[j]*dx[j]);
-		LAPf[ci] += (-f[l2]+16.0*f[l1]-30.0*f[ci]+16.0*f[r1]-f[r2])/(12.0*dx[j]*dx[j]); 
-
+		phi_s[j][ci] = m[2]/(12.0*dx[j]);
+		
+		
+		
 		
 		
 
