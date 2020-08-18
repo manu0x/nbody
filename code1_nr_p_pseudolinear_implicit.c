@@ -1558,7 +1558,7 @@ void cal_grd_tmunu(int k)
 	int ci,l1,l2,r1,r2,j;
 	double Vvl,V_fvl,fl;
 
-	double d1[3],d2[3];
+	double d1[3],d2[3],m[3];
 
 	
 
@@ -1573,7 +1573,7 @@ void cal_grd_tmunu(int k)
 
  	if(k==1)
 	{	fftw_execute(scf_plan_b);
-	#pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl)
+	#pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl,m)
 	  for(ci=0;ci<tN;++ci)
 	   {
 	  //  particle2mesh(tmpp,ci,tmpphi,a);
@@ -1595,14 +1595,32 @@ void cal_grd_tmunu(int k)
 		l2 = ci + ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 		r1 = ci + ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
 		r2 = ci + ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
+
+		m[0] = (-8.0*phi[l1]+8.0*phi[r1]); 
+		m[1] = (phi[l2]-phi[r2]);
+		m[2] = m[0] + m[1] ;
 		
 		
-		phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(d1[j]);
+		phi_s[j][ci] = m[2]/(d1[j]);
+
 		//f_s[j][ci] = (tmpf[l2]-8.0*tmpf[l1]+8.0*tmpf[r1]-tmpf[r2])/(12.0*dx[j]); 
 		
 		
 		//LAPphi[ci] += (-tmpphi[l2]+16.0*tmpphi[l1]-30.0*tmpphi[ci]+16.0*tmpphi[r1]-tmpphi[r2])/(12.0*dx[j]*dx[j]);
-		LAPf[ci] += (-scf_rhs[l2][0]+16.0*scf_rhs[l1][0]-30.0*scf_rhs[ci][0]+16.0*scf_rhs[r1][0]-scf_rhs[r2][0])/(n3sqrt*d2[j]); 
+		m[0] = (16.0*scf_rhs[l1][0]+16.0*scf_rhs[r1][0]); 
+		m[1] = (-scf_rhs[l2][0]-scf_rhs[r2][0]);
+		m[2] = m[0] + m[1] -30.0*scf_rhs[ci][0];
+		LAPf[ci]+= (m[2]/(n3sqrt*d2[j]));
+
+	
+		
+		
+		//phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(d1[j]);
+		//f_s[j][ci] = (tmpf[l2]-8.0*tmpf[l1]+8.0*tmpf[r1]-tmpf[r2])/(12.0*dx[j]); 
+		
+		
+		//LAPphi[ci] += (-tmpphi[l2]+16.0*tmpphi[l1]-30.0*tmpphi[ci]+16.0*tmpphi[r1]-tmpphi[r2])/(12.0*dx[j]*dx[j]);
+		//LAPf[ci] += (-scf_rhs[l2][0]+16.0*scf_rhs[l1][0]-30.0*scf_rhs[ci][0]+16.0*scf_rhs[r1][0]-scf_rhs[r2][0])/(n3sqrt*d2[j]); 
 
 		
 		
