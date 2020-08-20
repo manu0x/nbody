@@ -28,7 +28,7 @@ clock_t t_start,t_end;
 double n3sqrt;
 double *phi, *phi_a,  *f,*f_a,*slip,*slip_a,*tul00,*tuldss,fbdss,fb00;
 double phi_s[3][n*n*n],f_s[3][n*n*n],slip_s[3][n*n*n],LAPslip[n*n*n],LAPf[n*n*n],tmpslip2[n*n*n],tmpslip1[n*n*n];
-double *tmpphi,  *tmpf,*tmpphi_a, *tmpf_a, *ini_vel0,*ini_vel1,*ini_vel2,m=1.0;
+double *tmpphi,  *tmpf,*tmpphi_a, *tmpf_a, *ini_vel0,*ini_vel1,*ini_vel2,mass=1.0;
 double dx[3];
 double density_contrast[n*n*n],ini_density_contrast[n*n*n],ini_phi_potn[n*n*n];
 struct particle
@@ -305,7 +305,7 @@ void cal_spectrum(double *spcmesh,FILE *fspwrite,int isini)
 		if(kbincnt[i]!=0)
 	        {  delta_pw = sqrt(pwspctrm[i]*i*i*i*dk*dk*dk/(2.0*M_PI*M_PI*kbincnt[i]));  
 
-		   fprintf(fspwrite,"%lf\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
+		   fprintf(fspwrite,"%lf\t%lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\n",
 							a/ai,i*dk,pwspctrm[i]/(kbincnt[i]),pwspctrm[i]*ai*ai/(kbincnt[i]*a*a),
 							pwspctrm[i]/(kbincnt[i]*lin_growth*lin_growth),delta_pw*ai/a,delta_pw/lin_growth,W_cic[i]);
 
@@ -327,7 +327,7 @@ void cal_spectrum(double *spcmesh,FILE *fspwrite,int isini)
 
 		//-(2.0*a*a*a/(3.0*ommi*ai*ai*ai))*( 3.0*lin_phi*a_t*a_t/(a*a)  + kf*kf*lin_phi/(Hi*Hi*a*a) )
 
-		printf("li is %d and lin_ini_dcm is %.20lf lin_ini_phi is %.20lf\n",lin_i,lin_ini_dcm,kf);
+		printf("li is %d and lin_ini_dcm is %.13lf lin_ini_phi is %.13lf\n",lin_i,lin_ini_dcm,kf);
 
 	}
 
@@ -423,7 +423,7 @@ void cal_dc_fr_particles()
 		//printf("dc %lf\n",density_contrast[i]);
 		tsum+=density_contrast[i];
 		density_contrast[i]-=1.0 ;
-		fprintf(fpdc,"%d\t%lf\t%.10lf\t%.10lf\t%.10lf\t%.30lf\t%.30lf\n",i,a/ai,grid[i][0],grid[i][1],grid[i][2],ini_density_contrast[i],density_contrast[i]);
+		fprintf(fpdc,"%d\t%lf\t%.10lf\t%.10lf\t%.10lf\t%.13lf\t%.13lf\n",i,a/ai,grid[i][0],grid[i][1],grid[i][2],ini_density_contrast[i],density_contrast[i]);
 
 
 	}
@@ -520,7 +520,7 @@ void ini_rand_field()
 			    {F_ini_phi[cnt][0] = -1.5*omdmbini*Hi*Hi*F_ini_del[cnt][0]/(tpie*tpie*ksqr/(ai*ai) + 3.0*Hi*Hi );	
 			     F_ini_phi[cnt][1] = -1.5*omdmbini*Hi*Hi*F_ini_del[cnt][1]/(tpie*tpie*ksqr/(ai*ai) + 3.0*Hi*Hi );
 
-				 fprintf(fplinscale,"%d\t%.20lf\t%.20lf\t%.20lf\n",
+				 fprintf(fplinscale,"%d\t%.13lf\t%.13lf\t%.13lf\n",
 					        cnt,ksqr/(ai*ai), -3.0*Hi*Hi,(ksqr/(ai*ai))/(3.0*Hi*Hi) );	
 			    }
 			  else
@@ -751,7 +751,7 @@ void ini_rand_field()
 		ini_vel1[cnt] = ini_v1[cnt][0];
 		ini_vel2[cnt] = ini_v2[cnt][0];  
 
-		fprintf(fpinirand,"%d\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
+		fprintf(fpinirand,"%d\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\n",
 					cnt,ini_density_contrast[cnt],ini_phi_potn[cnt],ini_vel0[cnt],ini_vel1[cnt],ini_vel2[cnt]);
 
 
@@ -997,8 +997,8 @@ void particle2mesh(struct particle * pp,int p_id,double aloc)
 		}
 			
 		
-		tul00[k]  += m*del[i]*gamma*(1.0+4.0*phi[i]-sliploc-gamma*gamma*(vmgsqr*ak*ak*phi[i]+phi[i]-sliploc))/a3;
-		tuldss[k]  += m*del[i]*gamma*vmgsqr*(1.0+sliploc-gamma*gamma*(vmgsqr*ak*ak*phi[i]+phi[i]-sliploc))/aloc;
+		tul00[k]  += mass*del[i]*gamma*(1.0+4.0*phi[i]-sliploc-gamma*gamma*(vmgsqr*ak*ak*phi[i]+phi[i]-sliploc))/a3;
+		tuldss[k]  += mass*del[i]*gamma*vmgsqr*(1.0+sliploc-gamma*gamma*(vmgsqr*ak*ak*phi[i]+phi[i]-sliploc))/aloc;
 		
 		
 	}	
@@ -1249,7 +1249,7 @@ void background(int bk)
     
     a_t = sqrt((ommi*ai*ai*ai/a  + (1.0/(Mpl*Mpl))*a*a*Vvl/(3.0*c)) / ( 1.0 - (1.0/(Mpl*Mpl))*a*a*fb_a*fb_a/(6.0*c*c*c))) ;
     Hi = Hb0*a/a_t;
-    printf("\nHi    %.20lf  \nratio(Hi/Hb0)  %.20lf\n",Hi,a/a_t);
+    printf("\nHi    %.13lf  \nratio(Hi/Hb0)  %.13lf\n",Hi,a/a_t);
     Vvl = V(fb);
     
     w = (fb_a*fb_a*a_t*a_t/(2.0*c*c) - Vvl)/(fb_a*fb_a*a_t*a_t/(2.0*c*c) + Vvl);
@@ -1277,16 +1277,17 @@ void write_fields()
 {
 	int i;
 	char name_p[20],name_f[20];
-	double f_dc,f_prsr, f_denst, Vvl, Vvlb,back_f_denst,zaw;
+	double f_dc,f_prsr, f_denst, Vvl, Vvlb,back_f_denst,zaw,wb;
 
 	Vvlb = V(fb);
 
 	zaw = a0/a - 1.0;
 
 	back_f_denst = (0.5*fb_a*a_t*fb_a*a_t + Vvlb);
+	wb = (0.5*fb_a*a_t*fb_a*a_t - Vvlb)/(0.5*fb_a*a_t*fb_a*a_t + Vvlb);
 
-	snprintf(name_p,20,"prtcls_z_%lf",zaw);
-	snprintf(name_f,20,"fields_z_%lf",zaw);
+	snprintf(name_p,20,"lin_prtcls_z_%lf",zaw);
+	snprintf(name_f,20,"lin_fields_z_%lf",zaw);
 
 	fp_particles  = fopen(name_p,"w");
 	fp_fields = fopen(name_f,"w");
@@ -1296,17 +1297,17 @@ void write_fields()
 		Vvl = V(f[i]);	
 				
 
-		f_prsr = 0.5*( f_a[i]*a_t*f_a[i]*a_t/(1.0+2.0*(phi[i]-slip[i]))
+		f_prsr = 0.5*( f_a[i]*a_t*f_a[i]*a_t/(1.0+2.0*(phi[i]))
 			 - (f_s[0][i]*f_s[0][i]+f_s[1][i]*f_s[1][i]+f_s[2][i]*f_s[2][i])/(a*a*(1.0-2.0*phi[i])) ) - Vvl;
-		f_denst = 0.5*( f_a[i]*a_t*f_a[i]*a_t/(1.0+2.0*(phi[i]-slip[i]))
+		f_denst = 0.5*( f_a[i]*a_t*f_a[i]*a_t/(1.0+2.0*(phi[i]))
 			 - (f_s[0][i]*f_s[0][i]+f_s[1][i]*f_s[1][i]+f_s[2][i]*f_s[2][i])/(a*a*(1.0-2.0*phi[i])) ) + Vvl;
 
 		f_dc = (f_denst/back_f_denst)-1.0;
 
-		fprintf(fp_fields,"%d\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
-					i,a/ai,grid[i][0],grid[i][1],grid[i][2],density_contrast[i],phi[i],slip[i],f[i],f_dc,f_prsr/f_denst);
+		fprintf(fp_fields,"%d\t%lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\n",
+			i,a/ai,grid[i][0],grid[i][1],grid[i][2],density_contrast[i],phi[i],slip[i],f[i],(f[i]/fb)-1.0,f_dc,((f_prsr/f_denst)/wb) - 1.0);
 
-		fprintf(fp_particles,"%d\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
+		fprintf(fp_particles,"%d\t%lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\n",
 					i,a/ai,p[i].x[0],p[i].x[1],p[i].x[2],p[i].v[0],p[i].v[1],p[i].v[2]);
 
 
@@ -1956,7 +1957,7 @@ int evolve(double aini, double astp)
 		 
 
 		fprintf(fpback,"%lf\t%.10lf\t%.10lf\n",a/ai,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t),omfb*a*a/(a_t*a_t));
-		fprintf(fplin,"%lf\t%.20lf\t%.20lf\n",a/ai,lin_growth,lin_phi);
+		fprintf(fplin,"%lf\t%.13lf\t%.13lf\n",a/ai,lin_growth,lin_phi);
 		printf("a  %lf %.10lf  %.10lf\n",a,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t),omfb);
 		fflush(stdout);
 	

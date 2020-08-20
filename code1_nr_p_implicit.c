@@ -305,7 +305,7 @@ void cal_spectrum(double *spcmesh,FILE *fspwrite,int isini)
 		if(kbincnt[i]!=0)
 	        {  delta_pw = sqrt(pwspctrm[i]*i*i*i*dk*dk*dk/(2.0*M_PI*M_PI*kbincnt[i]));  
 
-		   fprintf(fspwrite,"%lf\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
+		   fprintf(fspwrite,"%lf\t%lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\n",
 							a/ai,i*dk,pwspctrm[i]/(kbincnt[i]),pwspctrm[i]*ai*ai/(kbincnt[i]*a*a),
 							pwspctrm[i]/(kbincnt[i]*lin_growth*lin_growth),delta_pw*ai/a,delta_pw/lin_growth,W_cic[i]);
 
@@ -327,7 +327,7 @@ void cal_spectrum(double *spcmesh,FILE *fspwrite,int isini)
 
 		//-(2.0*a*a*a/(3.0*ommi*ai*ai*ai))*( 3.0*lin_phi*a_t*a_t/(a*a)  + kf*kf*lin_phi/(Hi*Hi*a*a) )
 
-		printf("li is %d and lin_ini_dcm is %.20lf lin_ini_phi is %.20lf\n",lin_i,lin_ini_dcm,kf);
+		printf("li is %d and lin_ini_dcm is %.13lf lin_ini_phi is %.13lf\n",lin_i,lin_ini_dcm,kf);
 
 	}
 
@@ -423,7 +423,7 @@ void cal_dc_fr_particles()
 		//printf("dc %lf\n",density_contrast[i]);
 		tsum+=density_contrast[i];
 		density_contrast[i]-=1.0 ;
-		fprintf(fpdc,"%d\t%lf\t%.10lf\t%.10lf\t%.10lf\t%.30lf\t%.30lf\n",i,a/ai,grid[i][0],grid[i][1],grid[i][2],ini_density_contrast[i],density_contrast[i]);
+		fprintf(fpdc,"%d\t%lf\t%.10lf\t%.10lf\t%.10lf\t%.13lf\t%.13lf\n",i,a/ai,grid[i][0],grid[i][1],grid[i][2],ini_density_contrast[i],density_contrast[i]);
 
 
 	}
@@ -520,7 +520,7 @@ void ini_rand_field()
 			    {F_ini_phi[cnt][0] = -1.5*omdmbini*Hi*Hi*F_ini_del[cnt][0]/(tpie*tpie*ksqr/(ai*ai) + 3.0*Hi*Hi );	
 			     F_ini_phi[cnt][1] = -1.5*omdmbini*Hi*Hi*F_ini_del[cnt][1]/(tpie*tpie*ksqr/(ai*ai) + 3.0*Hi*Hi );
 
-				 fprintf(fplinscale,"%d\t%.20lf\t%.20lf\t%.20lf\n",
+				 fprintf(fplinscale,"%d\t%.13lf\t%.13lf\t%.13lf\n",
 					        cnt,ksqr/(ai*ai), -3.0*Hi*Hi,(ksqr/(ai*ai))/(3.0*Hi*Hi) );	
 			    }
 			  else
@@ -751,7 +751,7 @@ void ini_rand_field()
 		ini_vel1[cnt] = ini_v1[cnt][0];
 		ini_vel2[cnt] = ini_v2[cnt][0];  
 
-		fprintf(fpinirand,"%d\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
+		fprintf(fpinirand,"%d\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\n",
 					cnt,ini_density_contrast[cnt],ini_phi_potn[cnt],ini_vel0[cnt],ini_vel1[cnt],ini_vel2[cnt]);
 
 
@@ -1213,7 +1213,7 @@ void background(int bk)
     
     a_t = sqrt((ommi*ai*ai*ai/a  + (1.0/(Mpl*Mpl))*a*a*Vvl/(3.0*c)) / ( 1.0 - (1.0/(Mpl*Mpl))*a*a*fb_a*fb_a/(6.0*c*c*c))) ;
     Hi = Hb0*a/a_t;
-    printf("\nHi    %.20lf  \nratio(Hi/Hb0)  %.20lf\n",Hi,a/a_t);
+    printf("\nHi    %.13lf  \nratio(Hi/Hb0)  %.13lf\n",Hi,a/a_t);
     Vvl = V(fb);
     
     w = (fb_a*fb_a*a_t*a_t/(2.0*c*c) - Vvl)/(fb_a*fb_a*a_t*a_t/(2.0*c*c) + Vvl);
@@ -1241,13 +1241,14 @@ void write_fields()
 {
 	int i;
 	char name_p[20],name_f[20];
-	double f_dc,f_prsr, f_denst, Vvl, Vvlb,back_f_denst,zaw;
+	double f_dc,f_prsr, f_denst, Vvl, Vvlb,back_f_denst,zaw,wb;
 
 	Vvlb = V(fb);
 
 	zaw = a0/a - 1.0;
 
 	back_f_denst = (0.5*fb_a*a_t*fb_a*a_t + Vvlb);
+	wb = (0.5*fb_a*a_t*fb_a*a_t - Vvlb)/(0.5*fb_a*a_t*fb_a*a_t + Vvlb);
 
 	snprintf(name_p,20,"prtcls_z_%lf",zaw);
 	snprintf(name_f,20,"fields_z_%lf",zaw);
@@ -1267,10 +1268,10 @@ void write_fields()
 
 		f_dc = (f_denst/back_f_denst)-1.0;
 
-		fprintf(fp_fields,"%d\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
-					i,a/ai,grid[i][0],grid[i][1],grid[i][2],density_contrast[i],phi[i],slip[i],f[i],f_dc,f_prsr/f_denst);
+		fprintf(fp_fields,"%d\t%lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\n",
+			i,a/ai,grid[i][0],grid[i][1],grid[i][2],density_contrast[i],phi[i],slip[i],f[i],(f[i]/fb)-1.0,f_dc,((f_prsr/f_denst)/wb) - 1.0);
 
-		fprintf(fp_particles,"%d\t%lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\t%.20lf\n",
+		fprintf(fp_particles,"%d\t%lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\t%.13lf\n",
 					i,a/ai,p[i].x[0],p[i].x[1],p[i].x[2],p[i].v[0],p[i].v[1],p[i].v[2]);
 
 
@@ -1926,7 +1927,7 @@ int evolve(double aini, double astp)
 		 
 
 		fprintf(fpback,"%lf\t%.10lf\t%.10lf\n",a/ai,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t),omfb*a*a/(a_t*a_t));
-		fprintf(fplin,"%lf\t%.20lf\t%.20lf\n",a/ai,lin_growth,lin_phi);
+		fprintf(fplin,"%lf\t%.13lf\t%.13lf\n",a/ai,lin_growth,lin_phi);
 		printf("a  %lf %.10lf  %.10lf\n",a,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t),omfb);
 		fflush(stdout);
 	
