@@ -1221,7 +1221,7 @@ void background(int bk)
 }
 
 
-vvoid write_fields()
+void write_fields()
 {
 	int i;
 	char name_p[20],name_f[20];
