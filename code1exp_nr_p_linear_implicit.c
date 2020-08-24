@@ -1258,7 +1258,7 @@ void write_fields()
 		f_dc = (f_denst/back_f_denst)-1.0;
 
 		fprintf(fp_fields,"%d\t%Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\n",
-			i,a/ai,grid[i][0],grid[i][1],grid[i][2],density_contrast[i],phi[i],0.0,f[i],(f[i]/fb)-1.0,f_dc,((f_prsr/f_denst)/wb) - 1.0);
+			i,a/ai,grid[i][0],grid[i][1],grid[i][2],density_contrast[i],phi[i],a-a,f[i],(f[i]/fb)-1.0,f_dc,((f_prsr/f_denst)/wb) - 1.0);
 
 		fprintf(fp_particles,"%d\t%Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\n",
 					i,a/ai,p[i].x[0],p[i].x[1],p[i].x[2],p[i].v[0],p[i].v[1],p[i].v[2]);
