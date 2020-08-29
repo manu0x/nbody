@@ -30,7 +30,7 @@ int fail =1;
 int glbl_cntr;
 
 long double *phi, *phi_a,  *f,*f_a,*tul00,*tuldss,fbdss,fb00;
-long double phi_s[3][n*n*n],f_s[3][n*n*n],LAPf[n*n*n];
+long double phi_s[3][n*n*n],f_s[3][n*n*n],LAPf[n*n*n],f_dc[n*n*n];
 long double *tmpphi,  *tmpf,*tmpphi_a, *tmpf_a, *ini_vel0,*ini_vel1,*ini_vel2,m=1.0;
 long double dx[3];
 long double density_contrast[n*n*n],ini_density_contrast[n*n*n],ini_phi_potn[n*n*n];
@@ -106,6 +106,7 @@ FILE *fp_particles;
 FILE *fpdc;
 FILE *fpphi;
 FILE *fppwspctrm_dc;
+FILE *fppwspctrm_f_dc;
 FILE *fppwspctrm_phi;
 FILE *fp_fields;
 FILE *fplinscale;
@@ -125,7 +126,7 @@ long double mesh2particle(struct particle *,int,long double *);
 void particle2mesh(struct particle * ,int ,long double *,long double );
 int evolve(long double ,long double );
 void cal_spectrum(long double *,FILE *,int);
-void cal_dc_fr_particles();
+void cal_dc();
 void clear_Tmunu();
 void write_fields();
 void slip_fft_cal();
@@ -159,6 +160,7 @@ void main()
 	fpdc  = fopen("lin_dc.txt","w");
 	fpback  = fopen("lin_back.txt","w");
 	fppwspctrm_dc  = fopen("lin_pwspctrm_dc2.txt","w");
+	fppwspctrm_f_dc  = fopen("lin_pwspctrm_f_dc.txt","w");
 	fppwspctrm_phi  = fopen("lin_pwspctrm_phi.txt","w");
 	fpphi = fopen("lin_phi.txt","w");
 	
@@ -225,7 +227,7 @@ void main()
 	
        i = evolve(a_zels,a0/ai);
 	printf("ffEvvvoloved...\n");
-       cal_dc_fr_particles();
+       cal_dc();
        cal_spectrum(density_contrast,fppwspctrm_dc,0);
 	 cal_spectrum(phi,fppwspctrm_phi,0);
        write_fields();
@@ -335,16 +337,33 @@ long double ini_power_spec(long double kamp)
 
 
 
-void cal_dc_fr_particles()
+
+
+
+void cal_dc()
 {
 
 	int i,j,k,p_id;
 	int anchor[3];
 	long double rvphi=0.0,del[8];
 	long double deld,tsum=0.0;
+
+	long double f_prsr, f_denst, Vvl, Vvlb,back_f_denst,zaw,wb;
+
+	Vvlb = V(fb);
+
+	zaw = a0/a - 1.0;
+
+	back_f_denst = (0.5*fb_a*a_t*fb_a*a_t + Vvlb);
+
+
   for(j=0;j<tN;++j)
   {
     density_contrast[j]=0.0;
+
+	f_denst = 0.5*fb_a*a_t*fb_a*a_t + (f_a[j]-fb_a)*a_t*a_t - phi[j]*fb_a*a_t*fb_a*a_t + Vvlb*(f[j]-fb);
+
+	f_dc[j] = (f_denst/back_f_denst)-1.0;
 
   }
 
@@ -1225,7 +1244,7 @@ void write_fields()
 {
 	int i;
 	char name_p[20],name_f[20];
-	long double f_dc,f_prsr, f_denst, Vvl, Vvlb,back_f_denst,zaw,wb;
+	long double f_prsr, f_denst, Vvl, Vvlb,back_f_denst,zaw,wb;
 
 	Vvlb = V(fb);
 
@@ -1250,10 +1269,10 @@ void write_fields()
 		f_denst = 0.5*( f_a[i]*a_t*f_a[i]*a_t/(1.0+2.0*(phi[i]))
 			 - (f_s[0][i]*f_s[0][i]+f_s[1][i]*f_s[1][i]+f_s[2][i]*f_s[2][i])/(a*a*(1.0-2.0*phi[i])) ) + Vvl;
 
-		f_dc = (f_denst/back_f_denst)-1.0;
+		f_dc[i] = (f_denst/back_f_denst)-1.0;
 
 		fprintf(fp_fields,"%d\t%Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\n",
-			i,a/ai,grid[i][0],grid[i][1],grid[i][2],density_contrast[i],phi[i],a-a,f[i],(f[i]/fb)-1.0,f_dc,((f_prsr/f_denst)/wb) - 1.0);
+			i,a/ai,grid[i][0],grid[i][1],grid[i][2],density_contrast[i],phi[i],a-a,f[i],(f[i]/fb)-1.0,f_dc[i],((f_prsr/f_denst)/wb) - 1.0);
 
 		fprintf(fp_particles,"%d\t%Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\n",
 					i,a/ai,p[i].x[0],p[i].x[1],p[i].x[2],p[i].v[0],p[i].v[1],p[i].v[2]);
@@ -1298,8 +1317,8 @@ void initialise()
         L[0] = dx[0]*((long double) (n));  L[1] = dx[1]*((long double) (n));  L[2] = dx[2]*((long double) (n));
 	dk = 0.01/dx[0]; kbins = 0;
 
-	//ini_rand_field();
-	read_ini_rand_field();
+	ini_rand_field();
+	//read_ini_rand_field();
         
 	for(ci = 0;ci <tN; ++ci)
 	{
@@ -1531,7 +1550,7 @@ void initialise()
 	free(ini_vel0); free(ini_vel1); free(ini_vel2);
 	
 
-	cal_dc_fr_particles();
+	cal_dc();
 	
 
 
@@ -1539,6 +1558,7 @@ void initialise()
 
 	cal_spectrum(density_contrast,fppwspctrm_dc,0);
 	cal_spectrum(phi,fppwspctrm_phi,0);
+	cal_spectrum(f_dc,fppwspctrm_f_dc,0);
 
 	printf("Initialization Complete.\n");
 	printf("\nK details:\n	dk is %Lf  per MPc",dk/lenfac);
@@ -1623,7 +1643,7 @@ void cal_grd_tmunu(int k)
 		LAPf[ci]+= (m[2]/(n3sqrt*d2[j]));
 
 		if(a==a_zels)
-		printf("%d\t%.16Lf\n",ci,LAPf[ci]);
+		printf("%d\t%.18Lf\n",ci,LAPf[ci]);
 
 		
 		
@@ -1784,8 +1804,9 @@ int evolve(long double aini, long double astp)
 	if((lcntr%jprints==0))
 	   { printf("printing..\n");
 
-		 cal_dc_fr_particles();
+		 cal_dc();
       		 cal_spectrum(density_contrast,fppwspctrm_dc,0);
+		 cal_spectrum(f_dc,fppwspctrm_f_dc,0);
 		 cal_spectrum(phi,fppwspctrm_phi,0);
 		 write_fields();
 			++glbl_cntr;
