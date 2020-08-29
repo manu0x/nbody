@@ -61,32 +61,32 @@ long double W_cic[n*n*n],C1_cic_shot[n*n*n];
   
   
 
-fftw_complex *ini_del;
-fftw_complex *F_ini_del;
-fftw_complex *F_ini_phi;
-fftw_complex *ini_phi;
-fftw_complex *F_ini_v0;
-fftw_complex *ini_v0;
-fftw_complex *F_ini_v1;
-fftw_complex *ini_v1;
-fftw_complex *F_ini_v2;
-fftw_complex *ini_v2;
+fftwl_complex *ini_del;
+fftwl_complex *F_ini_del;
+fftwl_complex *F_ini_phi;
+fftwl_complex *ini_phi;
+fftwl_complex *F_ini_v0;
+fftwl_complex *ini_v0;
+fftwl_complex *F_ini_v1;
+fftwl_complex *ini_v1;
+fftwl_complex *F_ini_v2;
+fftwl_complex *ini_v2;
 
 
-fftw_plan ini_del_plan;
-fftw_plan ini_phi_plan;
-fftw_plan ini_v0_plan;
-fftw_plan ini_v1_plan;
-fftw_plan ini_v2_plan;
+fftwl_plan ini_del_plan;
+fftwl_plan ini_phi_plan;
+fftwl_plan ini_v0_plan;
+fftwl_plan ini_v1_plan;
+fftwl_plan ini_v2_plan;
 
 
 
 
-fftw_plan scf_plan_f;
-fftw_plan scf_plan_b;
+fftwl_plan scf_plan_f;
+fftwl_plan scf_plan_b;
 
-fftw_complex *scf_rhs;
-fftw_complex *scf_rhs_ft;
+fftwl_complex *scf_rhs;
+fftwl_complex *scf_rhs_ft;
 
 
 
@@ -151,8 +151,8 @@ void main()
 	//feenableexcept(FE_DIVBYZERO | FE_ItNVALID | FE_OVERFLOW);
 	//feenableexcept(FE_DIVBYZERO | FE_ItNVALID | FE_OVERFLOW);
 
-	fftw_init_threads();
-	fftw_plan_with_nthreads(128);
+	fftwl_init_threads();
+	fftwl_plan_with_nthreads(128);
 
 	
 	
@@ -170,8 +170,8 @@ void main()
 
         int i;
 
-       // i = fftw_init_threads();
-	//	fftw_plan_with_nthreads(omp_get_max_threads());
+       // i = fftwl_init_threads();
+	//	fftwl_plan_with_nthreads(omp_get_max_threads());
 
 	phi = (long double *) malloc(n*n*n*sizeof(long double)); 
         phi_a = (long double *) malloc(n*n*n*sizeof(long double)); 
@@ -192,27 +192,27 @@ void main()
 	ini_vel1=(long double *) malloc(n*n*n*sizeof(long double));
 	ini_vel2=(long double *) malloc(n*n*n*sizeof(long double));
 
-        F_ini_del = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	ini_del = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	F_ini_phi = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	ini_phi = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	F_ini_v0 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	ini_v0 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	F_ini_v1 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	ini_v1 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	F_ini_v2 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	ini_v2 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
+        F_ini_del = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	ini_del = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	F_ini_phi = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	ini_phi = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	F_ini_v0 = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	ini_v0 = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	F_ini_v1 = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	ini_v1 = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	F_ini_v2 = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	ini_v2 = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
 	
 
 
 	
-	scf_rhs = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	scf_rhs_ft = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
+	scf_rhs = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	scf_rhs_ft = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
 
 	
 
-	scf_plan_f = fftw_plan_dft_3d(n,n,n, scf_rhs, scf_rhs_ft, FFTW_FORWARD, FFTW_ESTIMATE);
-	scf_plan_b = fftw_plan_dft_3d(n,n,n, scf_rhs_ft, scf_rhs, FFTW_BACKWARD, FFTW_ESTIMATE);
+	scf_plan_f = fftwl_plan_dft_3d(n,n,n, scf_rhs, scf_rhs_ft, FFTW_FORWARD, FFTW_ESTIMATE);
+	scf_plan_b = fftwl_plan_dft_3d(n,n,n, scf_rhs_ft, scf_rhs, FFTW_BACKWARD, FFTW_ESTIMATE);
 
 	
 
@@ -252,11 +252,11 @@ void cal_spectrum(long double *spcmesh,FILE *fspwrite,int isini)
 {	int i,j;
 	long double delta_pw;
 
-	fftw_complex *dens_cntrst; fftw_complex *Fdens_cntrst;
-	fftw_plan spec_plan;
+	fftwl_complex *dens_cntrst; fftwl_complex *Fdens_cntrst;
+	fftwl_plan spec_plan;
 
-	dens_cntrst = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	Fdens_cntrst = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
+	dens_cntrst = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	Fdens_cntrst = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
 
 	for(i=0;i<tN;++i)
 	{
@@ -266,10 +266,10 @@ void cal_spectrum(long double *spcmesh,FILE *fspwrite,int isini)
 		pwspctrm[i] = 0.0;
 	}
 
-	fftw_plan_with_nthreads(4);
-	spec_plan = fftw_plan_dft_3d(n,n,n, dens_cntrst, Fdens_cntrst, FFTW_FORWARD, FFTW_ESTIMATE);
-	fftw_execute(spec_plan);
-	fftw_free(dens_cntrst);
+	fftwl_plan_with_nthreads(4);
+	spec_plan = fftwl_plan_dft_3d(n,n,n, dens_cntrst, Fdens_cntrst, FFTW_FORWARD, FFTW_ESTIMATE);
+	fftwl_execute(spec_plan);
+	fftwl_free(dens_cntrst);
 
 	if(isini==1)
 	printf("isini is 1\n");
@@ -319,8 +319,8 @@ void cal_spectrum(long double *spcmesh,FILE *fspwrite,int isini)
 
 
 
-	fftw_free(Fdens_cntrst);
-	fftw_destroy_plan(spec_plan);
+	fftwl_free(Fdens_cntrst);
+	fftwl_destroy_plan(spec_plan);
 	fprintf(fspwrite,"\n\n\n\n");
 }
 
@@ -725,19 +725,19 @@ void ini_rand_field()
 
 
 
-	fftw_plan_with_nthreads(4);
-	ini_del_plan = fftw_plan_dft_3d(n,n,n, F_ini_del, ini_del, FFTW_BACKWARD, FFTW_ESTIMATE);
-	ini_v0_plan = fftw_plan_dft_3d(n,n,n, F_ini_v0, ini_v0, FFTW_BACKWARD, FFTW_ESTIMATE);
-	ini_v1_plan = fftw_plan_dft_3d(n,n,n, F_ini_v1, ini_v1, FFTW_BACKWARD, FFTW_ESTIMATE);
-	ini_v2_plan = fftw_plan_dft_3d(n,n,n, F_ini_v2, ini_v2, FFTW_BACKWARD, FFTW_ESTIMATE);
-	ini_phi_plan = fftw_plan_dft_3d(n,n,n, F_ini_phi, ini_phi, FFTW_BACKWARD, FFTW_ESTIMATE);
+	fftwl_plan_with_nthreads(4);
+	ini_del_plan = fftwl_plan_dft_3d(n,n,n, F_ini_del, ini_del, FFTW_BACKWARD, FFTW_ESTIMATE);
+	ini_v0_plan = fftwl_plan_dft_3d(n,n,n, F_ini_v0, ini_v0, FFTW_BACKWARD, FFTW_ESTIMATE);
+	ini_v1_plan = fftwl_plan_dft_3d(n,n,n, F_ini_v1, ini_v1, FFTW_BACKWARD, FFTW_ESTIMATE);
+	ini_v2_plan = fftwl_plan_dft_3d(n,n,n, F_ini_v2, ini_v2, FFTW_BACKWARD, FFTW_ESTIMATE);
+	ini_phi_plan = fftwl_plan_dft_3d(n,n,n, F_ini_phi, ini_phi, FFTW_BACKWARD, FFTW_ESTIMATE);
 	
 
-	fftw_execute(ini_del_plan);
-	fftw_execute(ini_phi_plan);
-	fftw_execute(ini_v0_plan);
-	fftw_execute(ini_v1_plan);
-	fftw_execute(ini_v2_plan);
+	fftwl_execute(ini_del_plan);
+	fftwl_execute(ini_phi_plan);
+	fftwl_execute(ini_v0_plan);
+	fftwl_execute(ini_v1_plan);
+	fftwl_execute(ini_v2_plan);
 
 	
 	for(cnt=0;cnt<tN;++cnt)
@@ -764,24 +764,24 @@ void ini_rand_field()
 
 	}
     
-	 fftw_free(F_ini_phi);
-	 fftw_free(F_ini_del);
-	 fftw_free(F_ini_v0);
-	 fftw_free(F_ini_v1);
-	 fftw_free(F_ini_v2);
+	 fftwl_free(F_ini_phi);
+	 fftwl_free(F_ini_del);
+	 fftwl_free(F_ini_v0);
+	 fftwl_free(F_ini_v1);
+	 fftwl_free(F_ini_v2);
 
-	 fftw_free(ini_phi);
-	 fftw_free(ini_del);
-	 fftw_free(ini_v0);
-	 fftw_free(ini_v1);
-	 fftw_free(ini_v2);
+	 fftwl_free(ini_phi);
+	 fftwl_free(ini_del);
+	 fftwl_free(ini_v0);
+	 fftwl_free(ini_v1);
+	 fftwl_free(ini_v2);
 
 
-	fftw_destroy_plan(ini_del_plan);
-	fftw_destroy_plan(ini_phi_plan);
-	fftw_destroy_plan(ini_v0_plan);
-	fftw_destroy_plan(ini_v1_plan);
-	fftw_destroy_plan(ini_v2_plan);
+	fftwl_destroy_plan(ini_del_plan);
+	fftwl_destroy_plan(ini_phi_plan);
+	fftwl_destroy_plan(ini_v0_plan);
+	fftwl_destroy_plan(ini_v1_plan);
+	fftwl_destroy_plan(ini_v2_plan);
 
 	printf("Generated initial Gaussian Random field  %d\n",maxcnt);
 	
@@ -1602,7 +1602,7 @@ void cal_grd_tmunu(int k)
 
 
  	if(k==1)
-	{	fftw_execute(scf_plan_b);
+	{	fftwl_execute(scf_plan_b);
 	#pragma omp parallel for private(j,l1,l2,r1,r2,m)
 	  for(ci=0;ci<tN;++ci)
 	   {
@@ -1708,7 +1708,7 @@ void cal_grd_tmunu(int k)
 
 
 	  }
-	fftw_execute(scf_plan_f);
+	fftwl_execute(scf_plan_f);
 
 
 	}

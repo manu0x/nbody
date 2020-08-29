@@ -31,7 +31,7 @@ int fail =1;
 int glbl_cntr;
 
 long double *phi, *phi_a,  *f,*f_a,*tul00,*tuldss,fbdss,fb00;
-long double phi_s[3][n*n*n],f_s[3][n*n*n],LAPf[n*n*n];
+long double phi_s[3][n*n*n],f_s[3][n*n*n],LAPf[n*n*n],f_dc[n*n*n];
 long double *tmpphi,  *tmpf,*tmpphi_a, *tmpf_a, *ini_vel0,*ini_vel1,*ini_vel2,mass=1.0;
 long double dx[3];
 long double density_contrast[n*n*n],ini_density_contrast[n*n*n],ini_phi_potn[n*n*n];
@@ -62,32 +62,32 @@ long double W_cic[n*n*n],C1_cic_shot[n*n*n];
   
   
 
-fftw_complex *ini_del;
-fftw_complex *F_ini_del;
-fftw_complex *F_ini_phi;
-fftw_complex *ini_phi;
-fftw_complex *F_ini_v0;
-fftw_complex *ini_v0;
-fftw_complex *F_ini_v1;
-fftw_complex *ini_v1;
-fftw_complex *F_ini_v2;
-fftw_complex *ini_v2;
+fftwl_complex *ini_del;
+fftwl_complex *F_ini_del;
+fftwl_complex *F_ini_phi;
+fftwl_complex *ini_phi;
+fftwl_complex *F_ini_v0;
+fftwl_complex *ini_v0;
+fftwl_complex *F_ini_v1;
+fftwl_complex *ini_v1;
+fftwl_complex *F_ini_v2;
+fftwl_complex *ini_v2;
 
 
-fftw_plan ini_del_plan;
-fftw_plan ini_phi_plan;
-fftw_plan ini_v0_plan;
-fftw_plan ini_v1_plan;
-fftw_plan ini_v2_plan;
+fftwl_plan ini_del_plan;
+fftwl_plan ini_phi_plan;
+fftwl_plan ini_v0_plan;
+fftwl_plan ini_v1_plan;
+fftwl_plan ini_v2_plan;
 
 
 
 
-fftw_plan scf_plan_f;
-fftw_plan scf_plan_b;
+fftwl_plan scf_plan_f;
+fftwl_plan scf_plan_b;
 
-fftw_complex *scf_rhs;
-fftw_complex *scf_rhs_ft;
+fftwl_complex *scf_rhs;
+fftwl_complex *scf_rhs_ft;
 
 
 
@@ -107,6 +107,7 @@ FILE *fp_particles;
 FILE *fpdc;
 FILE *fpphi;
 FILE *fppwspctrm_dc;
+FILE *fppwspctrm_f_dc;
 FILE *fppwspctrm_phi;
 FILE *fp_fields;
 FILE *fplinscale;
@@ -126,7 +127,7 @@ long double mesh2particle(struct particle *,int,long double *);
 void particle2mesh(struct particle * ,int ,long double *,long double );
 int evolve(long double ,long double );
 void cal_spectrum(long double *,FILE *,int);
-void cal_dc_fr_particles();
+void cal_dc();
 void clear_Tmunu();
 void write_fields();
 void slip_fft_cal();
@@ -153,8 +154,8 @@ void main()
 	//feenableexcept(FE_DIVBYZERO | FE_ItNVALID | FE_OVERFLOW);
 	//feenableexcept(FE_DIVBYZERO | FE_ItNVALID | FE_OVERFLOW);
 
-	fftw_init_threads();
-	fftw_plan_with_nthreads(128);
+	fftwl_init_threads();
+	fftwl_plan_with_nthreads(128);
 
 	
 	
@@ -162,6 +163,7 @@ void main()
 	fpdc  = fopen("lin_dc.txt","w");
 	fpback  = fopen("lin_back.txt","w");
 	fppwspctrm_dc  = fopen("lin_pwspctrm_dc2.txt","w");
+	fppwspctrm_f_dc  = fopen("lin_pwspctrm_f_dc.txt","w");
 	fppwspctrm_phi  = fopen("lin_pwspctrm_phi.txt","w");
 	fpphi = fopen("lin_phi.txt","w");
 	
@@ -171,8 +173,8 @@ void main()
 
         int i;
 
-       // i = fftw_init_threads();
-	//	fftw_plan_with_nthreads(omp_get_max_threads());
+       // i = fftwl_init_threads();
+	//	fftwl_plan_with_nthreads(omp_get_max_threads());
 
 	phi = (long double *) malloc(n*n*n*sizeof(long double)); 
         phi_a = (long double *) malloc(n*n*n*sizeof(long double)); 
@@ -193,27 +195,27 @@ void main()
 	ini_vel1=(long double *) malloc(n*n*n*sizeof(long double));
 	ini_vel2=(long double *) malloc(n*n*n*sizeof(long double));
 
-        F_ini_del = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	ini_del = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	F_ini_phi = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	ini_phi = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	F_ini_v0 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	ini_v0 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	F_ini_v1 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	ini_v1 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	F_ini_v2 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	ini_v2 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
+        F_ini_del = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	ini_del = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	F_ini_phi = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	ini_phi = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	F_ini_v0 = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	ini_v0 = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	F_ini_v1 = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	ini_v1 = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	F_ini_v2 = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	ini_v2 = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
 	
 
 
 	
-	scf_rhs = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	scf_rhs_ft = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
+	scf_rhs = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	scf_rhs_ft = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
 
 	
 
-	scf_plan_f = fftw_plan_dft_3d(n,n,n, scf_rhs, scf_rhs_ft, FFTW_FORWARD, FFTW_ESTIMATE);
-	scf_plan_b = fftw_plan_dft_3d(n,n,n, scf_rhs_ft, scf_rhs, FFTW_BACKWARD, FFTW_ESTIMATE);
+	scf_plan_f = fftwl_plan_dft_3d(n,n,n, scf_rhs, scf_rhs_ft, FFTW_FORWARD, FFTW_ESTIMATE);
+	scf_plan_b = fftwl_plan_dft_3d(n,n,n, scf_rhs_ft, scf_rhs, FFTW_BACKWARD, FFTW_ESTIMATE);
 
 	
 
@@ -228,7 +230,7 @@ void main()
 	
        i = evolve(a_zels,a0/ai);
 	printf("ffEvvvoloved...\n");
-       cal_dc_fr_particles();
+       cal_dc();
        cal_spectrum(density_contrast,fppwspctrm_dc,0);
 	 cal_spectrum(phi,fppwspctrm_phi,0);
        write_fields();
@@ -253,11 +255,11 @@ void cal_spectrum(long double *spcmesh,FILE *fspwrite,int isini)
 {	int i,j;
 	long double delta_pw;
 
-	fftw_complex *dens_cntrst; fftw_complex *Fdens_cntrst;
-	fftw_plan spec_plan;
+	fftwl_complex *dens_cntrst; fftwl_complex *Fdens_cntrst;
+	fftwl_plan spec_plan;
 
-	dens_cntrst = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	Fdens_cntrst = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
+	dens_cntrst = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
+	Fdens_cntrst = (fftwl_complex*) fftwl_malloc(sizeof(fftwl_complex) * n*n*n);
 
 	for(i=0;i<tN;++i)
 	{
@@ -267,10 +269,10 @@ void cal_spectrum(long double *spcmesh,FILE *fspwrite,int isini)
 		pwspctrm[i] = 0.0;
 	}
 
-	fftw_plan_with_nthreads(4);
-	spec_plan = fftw_plan_dft_3d(n,n,n, dens_cntrst, Fdens_cntrst, FFTW_FORWARD, FFTW_ESTIMATE);
-	fftw_execute(spec_plan);
-	fftw_free(dens_cntrst);
+	fftwl_plan_with_nthreads(4);
+	spec_plan = fftwl_plan_dft_3d(n,n,n, dens_cntrst, Fdens_cntrst, FFTW_FORWARD, FFTW_ESTIMATE);
+	fftwl_execute(spec_plan);
+	fftwl_free(dens_cntrst);
 
 	if(isini==1)
 	printf("isini is 1\n");
@@ -320,8 +322,8 @@ void cal_spectrum(long double *spcmesh,FILE *fspwrite,int isini)
 
 
 
-	fftw_free(Fdens_cntrst);
-	fftw_destroy_plan(spec_plan);
+	fftwl_free(Fdens_cntrst);
+	fftwl_destroy_plan(spec_plan);
 	fprintf(fspwrite,"\n\n\n\n");
 }
 
@@ -338,16 +340,30 @@ long double ini_power_spec(long double kamp)
 
 
 
-void cal_dc_fr_particles()
+void cal_dc()
 {
 
 	int i,j,k,p_id;
 	int anchor[3];
 	long double rvphi=0.0,del[8];
 	long double deld,tsum=0.0;
+
+	long double f_prsr, f_denst, Vvl, Vvlb,back_f_denst,zaw,wb;
+
+	Vvlb = V(fb);
+
+	zaw = a0/a - 1.0;
+
+	back_f_denst = (0.5*fb_a*a_t*fb_a*a_t + Vvlb);
+
+
   for(j=0;j<tN;++j)
   {
     density_contrast[j]=0.0;
+
+	f_denst = 0.5*fb_a*a_t*fb_a*a_t + (f_a[j]-fb_a)*a_t*a_t - phi[j]*fb_a*a_t*fb_a*a_t + Vvlb*(f[j]-fb);
+
+	f_dc[j] = (f_denst/back_f_denst)-1.0;
 
   }
 
@@ -709,19 +725,19 @@ void ini_rand_field()
 
 
 
-	fftw_plan_with_nthreads(4);
-	ini_del_plan = fftw_plan_dft_3d(n,n,n, F_ini_del, ini_del, FFTW_BACKWARD, FFTW_ESTIMATE);
-	ini_v0_plan = fftw_plan_dft_3d(n,n,n, F_ini_v0, ini_v0, FFTW_BACKWARD, FFTW_ESTIMATE);
-	ini_v1_plan = fftw_plan_dft_3d(n,n,n, F_ini_v1, ini_v1, FFTW_BACKWARD, FFTW_ESTIMATE);
-	ini_v2_plan = fftw_plan_dft_3d(n,n,n, F_ini_v2, ini_v2, FFTW_BACKWARD, FFTW_ESTIMATE);
-	ini_phi_plan = fftw_plan_dft_3d(n,n,n, F_ini_phi, ini_phi, FFTW_BACKWARD, FFTW_ESTIMATE);
+	fftwl_plan_with_nthreads(4);
+	ini_del_plan = fftwl_plan_dft_3d(n,n,n, F_ini_del, ini_del, FFTW_BACKWARD, FFTW_ESTIMATE);
+	ini_v0_plan = fftwl_plan_dft_3d(n,n,n, F_ini_v0, ini_v0, FFTW_BACKWARD, FFTW_ESTIMATE);
+	ini_v1_plan = fftwl_plan_dft_3d(n,n,n, F_ini_v1, ini_v1, FFTW_BACKWARD, FFTW_ESTIMATE);
+	ini_v2_plan = fftwl_plan_dft_3d(n,n,n, F_ini_v2, ini_v2, FFTW_BACKWARD, FFTW_ESTIMATE);
+	ini_phi_plan = fftwl_plan_dft_3d(n,n,n, F_ini_phi, ini_phi, FFTW_BACKWARD, FFTW_ESTIMATE);
 	
 
-	fftw_execute(ini_del_plan);
-	fftw_execute(ini_phi_plan);
-	fftw_execute(ini_v0_plan);
-	fftw_execute(ini_v1_plan);
-	fftw_execute(ini_v2_plan);
+	fftwl_execute(ini_del_plan);
+	fftwl_execute(ini_phi_plan);
+	fftwl_execute(ini_v0_plan);
+	fftwl_execute(ini_v1_plan);
+	fftwl_execute(ini_v2_plan);
 
 	
 	for(cnt=0;cnt<tN;++cnt)
@@ -748,24 +764,24 @@ void ini_rand_field()
 
 	}
     
-	 fftw_free(F_ini_phi);
-	 fftw_free(F_ini_del);
-	 fftw_free(F_ini_v0);
-	 fftw_free(F_ini_v1);
-	 fftw_free(F_ini_v2);
+	 fftwl_free(F_ini_phi);
+	 fftwl_free(F_ini_del);
+	 fftwl_free(F_ini_v0);
+	 fftwl_free(F_ini_v1);
+	 fftwl_free(F_ini_v2);
 
-	 fftw_free(ini_phi);
-	 fftw_free(ini_del);
-	 fftw_free(ini_v0);
-	 fftw_free(ini_v1);
-	 fftw_free(ini_v2);
+	 fftwl_free(ini_phi);
+	 fftwl_free(ini_del);
+	 fftwl_free(ini_v0);
+	 fftwl_free(ini_v1);
+	 fftwl_free(ini_v2);
 
 
-	fftw_destroy_plan(ini_del_plan);
-	fftw_destroy_plan(ini_phi_plan);
-	fftw_destroy_plan(ini_v0_plan);
-	fftw_destroy_plan(ini_v1_plan);
-	fftw_destroy_plan(ini_v2_plan);
+	fftwl_destroy_plan(ini_del_plan);
+	fftwl_destroy_plan(ini_phi_plan);
+	fftwl_destroy_plan(ini_v0_plan);
+	fftwl_destroy_plan(ini_v1_plan);
+	fftwl_destroy_plan(ini_v2_plan);
 
 	printf("Generated initial Gaussian Random field  %d\n",maxcnt);
 	
@@ -1230,7 +1246,7 @@ void write_fields()
 {
 	int i;
 	char name_p[20],name_f[20];
-	long double f_dc,f_prsr, f_denst, Vvl, Vvlb,back_f_denst,zaw,wb;
+	long double f_prsr, f_denst, Vvl, Vvlb,back_f_denst,zaw,wb;
 
 	Vvlb = V(fb);
 
@@ -1255,10 +1271,10 @@ void write_fields()
 		f_denst = 0.5*( f_a[i]*a_t*f_a[i]*a_t/(1.0+2.0*(phi[i]))
 			 - (f_s[0][i]*f_s[0][i]+f_s[1][i]*f_s[1][i]+f_s[2][i]*f_s[2][i])/(a*a*(1.0-2.0*phi[i])) ) + Vvl;
 
-		f_dc = (f_denst/back_f_denst)-1.0;
+		f_dc[i] = (f_denst/back_f_denst)-1.0;
 
 		fprintf(fp_fields,"%d\t%Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\n",
-			i,a/ai,grid[i][0],grid[i][1],grid[i][2],density_contrast[i],phi[i],a-a,f[i],(f[i]/fb)-1.0,f_dc,((f_prsr/f_denst)/wb) - 1.0);
+			i,a/ai,grid[i][0],grid[i][1],grid[i][2],density_contrast[i],phi[i],a-a,f[i],(f[i]/fb)-1.0,f_dc[i],((f_prsr/f_denst)/wb) - 1.0);
 
 		fprintf(fp_particles,"%d\t%Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\t%.16Lf\n",
 					i,a/ai,p[i].x[0],p[i].x[1],p[i].x[2],p[i].v[0],p[i].v[1],p[i].v[2]);
@@ -1270,7 +1286,6 @@ void write_fields()
 	fclose(fp_particles);
 
 }
-
 
 
 
@@ -1535,7 +1550,7 @@ void initialise()
 	free(ini_vel0); free(ini_vel1); free(ini_vel2);
 	
 
-	cal_dc_fr_particles();
+	cal_dc();
 	
 
 
@@ -1543,6 +1558,7 @@ void initialise()
 
 	cal_spectrum(density_contrast,fppwspctrm_dc,0);
 	cal_spectrum(phi,fppwspctrm_phi,0);
+	cal_spectrum(f_dc,fppwspctrm_f_dc,0);
 
 	printf("Initialization Complete.\n");
 	printf("\nK details:\n	dk is %Lf  per MPc",dk/lenfac);
@@ -1586,7 +1602,7 @@ void cal_grd_tmunu(int k)
 
 
  	if(k==1)
-	{	fftw_execute(scf_plan_b);
+	{	fftwl_execute(scf_plan_b);
 	#pragma omp parallel for private(j,l1,l2,r1,r2,m)
 	  for(ci=0;ci<tN;++ci)
 	   {
@@ -1692,7 +1708,7 @@ void cal_grd_tmunu(int k)
 
 
 	  }
-	fftw_execute(scf_plan_f);
+	fftwl_execute(scf_plan_f);
 
 
 	}
@@ -1789,8 +1805,9 @@ int evolve(long double aini, long double astp)
 	if((lcntr%jprints==0))
 	   { printf("printing..\n");
 
-		 cal_dc_fr_particles();
+		 cal_dc();
       		 cal_spectrum(density_contrast,fppwspctrm_dc,0);
+		 cal_spectrum(f_dc,fppwspctrm_f_dc,0);
 		 cal_spectrum(phi,fppwspctrm_phi,0);
 		 write_fields();
 			++glbl_cntr;
