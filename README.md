@@ -2,6 +2,8 @@
 ## For Nbody simulation with fields
 This project is still going on....
 
+This project aims at N-body simulations which can incorporate dynamics of quintessence dark energy models by solving relativistic field equations. So along with particles, we solve for metric field(represented by two Bardeen Potentials) and scalar field(quintessence). The aim is to have a code which can have nonlinear source term in both matter and scalar field.
+
 Current Status: Dynamics module seems to work. A comprehensive initial condition generator needs to be developed. 
 
 
