@@ -3,3 +3,5 @@
 This project is a first step towards writing N-body simulations based on relativistic fields.
 Basic equations are provided in this document.
 This repository contains programs with varying level of approximations:
+-Linear
+-Nonlin
