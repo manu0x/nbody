@@ -10,7 +10,7 @@ Current Status: Dynamics module seems to work. A comprehensive initial condition
 Basic equations are provided in this [document](https://github.com/manu0x/nbody/blob/master/equations.pdf).
 This repository contains programs with varying level of approximations. Current working branch is using a mix of finite 
 difference and Fourier transform based tehcniques.
-All C codes here are N-body codes. These are at varying level of approximations and may use different numerical scheme.
+All C codes here are N-body codes. These are at varying level of approximations and may use different numerical schemes.
 This project incudes different levels/choices of approximations:
 - All equations(in all codes here) have only upto first order terms in metric. 
 - Allowing nonlinear quintessence field or keeping it upto linear order. Codes that keep only linear terms in quintessence field have "linear" in their names.
