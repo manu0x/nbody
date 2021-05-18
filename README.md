@@ -21,6 +21,6 @@ This can be taken care of by using implicit numerical methods. But implicit meth
 very challenging for large no. of points, which is the case here. Here we try a simple partially implicit scheme, which seems to work. To get an idea about the terms 
 causing numerical instability and the trick that resolves it please have a look at the last few slides of this [talk](http://www.icehap.chiba-u.jp/IAU_B1/chaica2020/video/CaICA-II%20Nov.21/Nov21_06_Rajvanshi.mp4). 
 
-All codes using implicit mathods have "implicit" in their names. For example: code [code1exp_nr_p_implicit.c](https://github.com/manu0x/nbody/blob/minimal_finit_d_no_ft/code1exp_nr_p_implicit.c) 
-has only non-relativistic particles and uses implicit methods while [code1exp_rel_p_implicit.c](https://github.com/manu0x/nbody/blob/minimal_finit_d_no_ft/code1exp_rel_p_implicit.c)
+All codes using implicit mathods have "implicit" in their names. For example: code [code1exp_nr_p_implicit.c](https://github.com/manu0x/nbody/blob/master/code1exp_nr_p_implicit.c) 
+has only non-relativistic particles and uses implicit methods while [code1exp_rel_p_implicit.c](https://github.com/manu0x/nbody/blob/master/code1exp_rel_p_implicit.c)
 uses relativistic equations of motion for particles. 
