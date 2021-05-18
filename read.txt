@@ -1,0 +1,6 @@
+Started building and checking the basic structure for n-body code.
+
+Just checking the feasibility of fftw3 transforms without parallelization and in basic complex data structure.
+Found that 3d fftw3 transforms are non-feasibily slow. 
+
+In this code the rudimentary calculatons are with t->tHi, c=1, G=1 and a as independent parameter instead of time t.
