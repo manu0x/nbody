@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h> 
 #include <omp.h>
+#include <mpi.h>
 #include <fenv.h>
 #include <time.h>
 #include "mt19937ar.c"
@@ -12,6 +13,21 @@
 #define tpie  2.0*M_PI
 
 FILE *fppwspctrm;
+
+/////////// MPI related ////////////////////
+
+
+int mpicheck = 0;
+int num_p = 0;
+int rank;
+
+
+int nd_cart;
+
+MPI_Comm cart_comm;
+
+
+//////////////////////////////////////////////
 
 
 double G   = 1.0;
@@ -27,10 +43,10 @@ clock_t t_start,t_end;
 
 double n3sqrt;
 double *phi, *phi_a,  *f,*f_a,*slip,*slip_a,*tul00,*tuldss,fbdss,fb00;
-double phi_s[3][n*n*n],f_s[3][n*n*n],slip_s[3][n*n*n],LAPslip[n*n*n],LAPf[n*n*n],tmpslip2[n*n*n],tmpslip1[n*n*n];
+double *phi_s[3],*f_s[3],*slip_s[3],*LAPslip,*LAPf,*tmpslip2,*tmpslip1;
 double *tmpphi,  *tmpf,*tmpphi_a, *tmpf_a, *ini_vel0,*ini_vel1,*ini_vel2,m=1.0;
-double dx[3],d1[3],d2[3];
-double density_contrast[n*n*n],ini_density_contrast[n*n*n],ini_phi_potn[n*n*n];
+double *dx,*d1,*d2;
+double *density_contrast,*ini_density_contrast,*ini_phi_potn;
 /*struct particle
 	{	
 		double x[3];
@@ -45,12 +61,12 @@ double density_contrast[n*n*n],ini_density_contrast[n*n*n],ini_phi_potn[n*n*n];
 
 struct particle p[n*n*n],tmpp[n*n*n];
 */
-double grid[n*n*n][3];
-int ind_grid[n*n*n][3];
-double k_grid[n*n*n][3];
-int kmagrid[n*n*n],kbins,kbincnt[n*n*n];
-double dk; double pwspctrm[n*n*n];
-double W_cic[n*n*n],C1_cic_shot[n*n*n];
+double *grid[3];
+int *ind_grid[3];
+double *k_grid[3];
+int *kmagrid,kbins,*kbincnt;
+double dk; double *pwspctrm;
+double *W_cic,*C1_cic_shot;
 
  
 
@@ -130,8 +146,43 @@ double V_ff(double);
 void cal_grd_tmunu();
 
 
-void main()
+void main(int argc, char **argv)
 {   t_start = clock();
+
+
+	int i;
+      
+
+	mpicheck = MPI_Init(&argc,&argv);
+	mpicheck = MPI_Comm_size(MPI_COMM_WORLD,&num_p);
+	mpicheck = MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+
+	if(num_p<4)
+		nd_cart = 1;
+	else
+		if(num_p<8)
+			nd_cart = 2;
+		else
+			nd_cart = 3;
+
+
+	int * dims = calloc(nd_cart,sizeof(int));
+	int * periods = calloc(nd_cart,sizeof(int));
+	
+
+	for(i=0;i<nd_cart,++i)
+		periods[i] = 1;
+
+
+	mpicheck = MPI_Cart_create(MPI_COMM_WORLD,nd_cart, dims, periods,1,&cart_comm);
+
+
+	
+	
+
+	
+
+
 
     Mpl = 1.0/sqrt(8.0*3.142*G) ;
 	Hb0  = 22.04*(1e-5)*lenfac;
