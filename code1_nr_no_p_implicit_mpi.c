@@ -37,6 +37,7 @@ double lenfac = 1.0;
 double Hb0  ;
 double L[3];
 int tN;
+int n_axis[3];
 int fail =1;
 
 clock_t t_start,t_end;
@@ -168,13 +169,23 @@ void main(int argc, char **argv)
 
 	int * dims = calloc(nd_cart,sizeof(int));
 	int * periods = calloc(nd_cart,sizeof(int));
+
+	mpicheck = MPI_Dims_create(num_p,nd_cart,dims);
 	
 
 	for(i=0;i<nd_cart,++i)
-		periods[i] = 1;
+	{	periods[i] = 1;
+		
+		double tmp_naxis = (((double) n_axis[i])/ ((double) dims[i]));
+		n_axis_loc[i] = (int) ; 
+
+
+	}
 
 
 	mpicheck = MPI_Cart_create(MPI_COMM_WORLD,nd_cart, dims, periods,1,&cart_comm);
+
+	
 
 
 	
@@ -191,7 +202,7 @@ void main(int argc, char **argv)
         jprint = (int) (0.001/da);
 	jprints = 200*jprint;
 	
-	tN=n*n*n;
+	tN=nx*nx*nx;
 
 	n3sqrt = sqrt((double) tN);
         
