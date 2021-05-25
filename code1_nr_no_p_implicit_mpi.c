@@ -14,6 +14,7 @@
 
 FILE *fppwspctrm;
 
+
 /////////// MPI related ////////////////////
 
 
@@ -23,12 +24,14 @@ int rank;
 
 
 int nd_cart;
+int *my_coords;
+int my_corank;
+int n_axis_loc[3];
 
 MPI_Comm cart_comm;
 
 
 //////////////////////////////////////////////
-
 
 double G   = 1.0;
 double c   = 1.0;
@@ -147,12 +150,20 @@ double V_ff(double);
 void cal_grd_tmunu();
 
 
+void allocate_fields(int *);
+
+
 void main(int argc, char **argv)
 {   t_start = clock();
 
 
 	int i;
       
+
+	n_axis[0]=n;
+	n_axis[1]=n;
+	n_axis[2]=n;
+
 
 	mpicheck = MPI_Init(&argc,&argv);
 	mpicheck = MPI_Comm_size(MPI_COMM_WORLD,&num_p);
@@ -161,29 +172,55 @@ void main(int argc, char **argv)
 	if(num_p<4)
 		nd_cart = 1;
 	else
-		if(num_p<8)
+	{	if(num_p<20)
 			nd_cart = 2;
 		else
 			nd_cart = 3;
-
+	}
 
 	int * dims = calloc(nd_cart,sizeof(int));
 	int * periods = calloc(nd_cart,sizeof(int));
+	my_coords = calloc(nd_cart,sizeof(int));
 
-	mpicheck = MPI_Dims_create(num_p,nd_cart,dims);
-	
-
-	for(i=0;i<nd_cart,++i)
+	for(i=0;i<nd_cart;++i)
 	{	periods[i] = 1;
 		
-		double tmp_naxis = (((double) n_axis[i])/ ((double) dims[i]));
-		n_axis_loc[i] = (int) ; 
 
 
 	}
 
 
+	mpicheck = MPI_Dims_create(num_p,nd_cart,dims);
+
 	mpicheck = MPI_Cart_create(MPI_COMM_WORLD,nd_cart, dims, periods,1,&cart_comm);
+
+	mpicheck = MPI_Cart_get(cart_comm,nd_cart,dims,periods,my_coords);
+	
+	mpicheck = MPI_Cart_rank(cart_comm,my_coords,&my_corank);
+
+	for(i=0;i<3;++i)
+	{	
+		if(i<nd_cart)
+		{
+		   double tmp_naxis = (((double) n_axis[i])/ ((double) dims[i]));
+		   n_axis_loc[i] = (int) tmp_naxis;
+
+
+		    if((n_axis[i]%dims[i]) != 0)
+		     {
+		     
+			 if(my_coords[i]==(dims[i]-1))
+		      		n_axis_loc[i]+=(n_axis[i]-dims[i]*n_axis_loc[i]);
+
+		      }
+
+		}
+
+		else
+			n_axis_loc[i] = n_axis[i]; 
+
+
+	}
 
 	
 
@@ -202,7 +239,7 @@ void main(int argc, char **argv)
         jprint = (int) (0.001/da);
 	jprints = 200*jprint;
 	
-	tN=nx*nx*nx;
+	tN=(n_axis_loc[0]+2)*(n_axis_loc[1]+2)*(n_axis_loc[2]+2);
 
 	n3sqrt = sqrt((double) tN);
         
@@ -215,7 +252,7 @@ void main(int argc, char **argv)
 
 	
 	
-	
+	/*
 	fpdc  = fopen("dc.txt","w");
 	fpback  = fopen("back.txt","w");
 	fppwspctrm_dc  = fopen("pwspctrm_dc2.txt","w");
@@ -224,50 +261,19 @@ void main(int argc, char **argv)
 	
 	fplinscale = fopen("linscale.txt","w");
 	fplin = fopen("lpt.txt","w");
-
+	*/
 
         int i;
 
        // i = fftw_init_threads();
 	//	fftw_plan_with_nthreads(omp_get_max_threads());
 
-	phi = (double *) malloc(n*n*n*sizeof(double)); 
-        phi_a = (double *) malloc(n*n*n*sizeof(double)); 
-
-	slip = (double *) malloc(n*n*n*sizeof(double)); 
-	slip_a = (double *) malloc(n*n*n*sizeof(double)); 
-
-	f = (double *) malloc(n*n*n*sizeof(double)); 
-        f_a = (double *) malloc(n*n*n*sizeof(double)); 
-	tul00 = (double *) malloc(n*n*n*sizeof(double)); 
-        tuldss = (double *) malloc(n*n*n*sizeof(double));
-
-	//tmpphi = (double *) malloc(n*n*n*sizeof(double)); 
-        tmpphi_a = (double *) malloc(n*n*n*sizeof(double)); 
 	
-	//tmpf = (double *) malloc(n*n*n*sizeof(double)); 
-        tmpf_a = (double *) malloc(n*n*n*sizeof(double)); 
- 
 
+	allocate_fields(n_axis_loc);
+	allocate_fft_fields(n_axis_loc);
 
-        F_ini_del = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	ini_del = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	F_ini_phi = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	ini_phi = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	
-	slip_rhs = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	slip_rhs_ft = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-
-
-	scf_rhs = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-	scf_rhs_ft = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n*n*n);
-
-	slip_plan_f = fftw_plan_dft_3d(n,n,n, slip_rhs, slip_rhs_ft, FFTW_FORWARD, FFTW_ESTIMATE);
-	slip_plan_b = fftw_plan_dft_3d(n,n,n, slip_rhs_ft, slip_rhs, FFTW_BACKWARD, FFTW_ESTIMATE);
-
-	scf_plan_f = fftw_plan_dft_3d(n,n,n, scf_rhs, scf_rhs_ft, FFTW_FORWARD, FFTW_ESTIMATE);
-	scf_plan_b = fftw_plan_dft_3d(n,n,n, scf_rhs_ft, scf_rhs, FFTW_BACKWARD, FFTW_ESTIMATE);
-	
+       
 	
 
 	//m = (double *) malloc(n*n*n*sizeof(double)); 
@@ -298,6 +304,94 @@ void main(int argc, char **argv)
 
 
 
+
+
+
+void allocate_fields(int nax[3])
+{
+
+	 	
+	
+	int l = (nax[0]+2)*(nax[1]+2)*(nax[2]+2);
+	
+	phi  = calloc(l,sizeof(double));
+	phi_a  = calloc(l,sizeof(double));
+	f  = calloc(l,sizeof(double));
+	f_a  = calloc(l,sizeof(double));
+	slip  = calloc(l,sizeof(double));
+	slip_a  = calloc(l,sizeof(double));
+	tul00  = calloc(l,sizeof(double));
+	tuldss  = calloc(l,sizeof(double));
+
+	phi_s[0]  = calloc(l,sizeof(double));
+	phi_s[1]  = calloc(l,sizeof(double));
+	phi_s[2]  = calloc(l,sizeof(double));
+	
+	f_s[0]  = calloc(l,sizeof(double));
+	f_s[1]  = calloc(l,sizeof(double));
+	f_s[2]  = calloc(l,sizeof(double));
+	
+	
+	slip_s[0]  = calloc(l,sizeof(double));
+	slip_s[1]  = calloc(l,sizeof(double));
+	slip_s[2]  = calloc(l,sizeof(double));
+
+
+
+	
+
+	LAPslip  = calloc(l,sizeof(double));
+	LAPf = calloc(l,sizeof(double));
+	tmpslip1  = calloc(l,sizeof(double));
+	tmpslip2  = calloc(l,sizeof(double));
+
+	density_contrast = calloc(l,sizeof(double));
+
+
+	printf("Allocated...\n");
+
+
+}
+
+
+
+
+void allocate_fft_fields(int nax[3])
+{
+
+	 	
+	
+	int l = (nax[0]+2)*(nax[1]+2)*(nax[2]+2);
+
+	int a,b,c;
+	a = nax[0]+2;
+	b = nax[1]+2;
+	c = nax[2]+2;
+	
+	F_ini_del = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) *l);
+	ini_del = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
+	F_ini_phi = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
+	ini_phi = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
+	
+	slip_rhs = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
+	slip_rhs_ft = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
+
+
+	scf_rhs = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
+	scf_rhs_ft = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
+
+	slip_plan_f = fftw_plan_dft_3d(a,b,c, slip_rhs, slip_rhs_ft, FFTW_FORWARD, FFTW_ESTIMATE);
+	slip_plan_b = fftw_plan_dft_3d(a,b,c, slip_rhs_ft, slip_rhs, FFTW_BACKWARD, FFTW_ESTIMATE);
+
+	scf_plan_f = fftw_plan_dft_3d(a,b,c, scf_rhs, scf_rhs_ft, FFTW_FORWARD, FFTW_ESTIMATE);
+	scf_plan_b = fftw_plan_dft_3d(a,b,c, scf_rhs_ft, scf_rhs, FFTW_BACKWARD, FFTW_ESTIMATE);
+	
+	
+
+	printf("Allocated...fft_fields\n");
+
+
+}
 
 
 

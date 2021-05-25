@@ -53,20 +53,48 @@ double *dx,*d1,*d2;
 double *density_contrast,*ini_density_contrast,*ini_phi_potn;
 
 
-void allocate_fields(int nax[3],int ndc)
+void allocate_fields(int nax[3])
 {
 
-	 int nax_l[3];
-	 int il;	
+	 	
 	
-	int l = (nax[10+2)*(nax[1]+2)*(nax[2]+2);
+	int l = (nax[0]+2)*(nax[1]+2)*(nax[2]+2);
 	
 	phi  = calloc(l,sizeof(double));
 	phi_a  = calloc(l,sizeof(double));
 	f  = calloc(l,sizeof(double));
+	f_a  = calloc(l,sizeof(double));
+	slip  = calloc(l,sizeof(double));
+	slip_a  = calloc(l,sizeof(double));
+	tul00  = calloc(l,sizeof(double));
+	tuldss  = calloc(l,sizeof(double));
+
+	phi_s[0]  = calloc(l,sizeof(double));
+	phi_s[1]  = calloc(l,sizeof(double));
+	phi_s[2]  = calloc(l,sizeof(double));
+	
+	f_s[0]  = calloc(l,sizeof(double));
+	f_s[1]  = calloc(l,sizeof(double));
+	f_s[2]  = calloc(l,sizeof(double));
+	
+	
+	slip_s[0]  = calloc(l,sizeof(double));
+	slip_s[1]  = calloc(l,sizeof(double));
+	slip_s[2]  = calloc(l,sizeof(double));
 
 
 
+	
+
+	LAPslip  = calloc(l,sizeof(double));
+	LAPf = calloc(l,sizeof(double));
+	tmpslip1  = calloc(l,sizeof(double));
+	tmpslip2  = calloc(l,sizeof(double));
+
+	density_contrast = calloc(l,sizeof(double));
+
+
+	printf("Allocated...\n");
 
 
 }
@@ -314,6 +342,9 @@ for(i=0;i<num_p;++i)
 		 }
 
 }
+
+
+allocate_fields(n_axis_loc);
 
 
 MPI_Finalize();
