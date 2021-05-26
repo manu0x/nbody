@@ -6,7 +6,7 @@
 #include <mpi.h>
 #include <fenv.h>
 #include <time.h>
-#include "mt19937ar.c"
+//#include "mt19937ar.c"
 
 #define  n 64
 
@@ -27,6 +27,9 @@ int nd_cart;
 int *my_coords;
 int my_corank;
 int n_axis_loc[3];
+
+int * dims,*periods;
+
 
 MPI_Comm cart_comm;
 
@@ -49,7 +52,7 @@ double n3sqrt;
 double *phi, *phi_a,  *f,*f_a,*slip,*slip_a,*tul00,*tuldss,fbdss,fb00;
 double *phi_s[3],*f_s[3],*slip_s[3],*LAPslip,*LAPf,*tmpslip2,*tmpslip1;
 double *tmpphi,  *tmpf,*tmpphi_a, *tmpf_a, *ini_vel0,*ini_vel1,*ini_vel2,m=1.0;
-double *dx,*d1,*d2;
+double dx[3],d1[3],d2[3];
 double *density_contrast,*ini_density_contrast,*ini_phi_potn;
 /*struct particle
 	{	
@@ -151,6 +154,7 @@ void cal_grd_tmunu();
 
 
 void allocate_fields(int *);
+void allocate_fft_fields(int *);
 
 
 void main(int argc, char **argv)
@@ -178,8 +182,8 @@ void main(int argc, char **argv)
 			nd_cart = 3;
 	}
 
-	int * dims = calloc(nd_cart,sizeof(int));
-	int * periods = calloc(nd_cart,sizeof(int));
+	 dims = calloc(nd_cart,sizeof(int));
+	 periods = calloc(nd_cart,sizeof(int));
 	my_coords = calloc(nd_cart,sizeof(int));
 
 	for(i=0;i<nd_cart;++i)
@@ -247,15 +251,15 @@ void main(int argc, char **argv)
 	//feenableexcept(FE_DIVBYZERO | FE_ItNVALID | FE_OVERFLOW);
 	//feenableexcept(FE_DIVBYZERO | FE_ItNVALID | FE_OVERFLOW);
 
-	fftw_init_threads();
-	fftw_plan_with_nthreads(128);
+	//fftwl_init_threads();
+	//fftwl_plan_with_nthreads(128);
 
 	
 	
-	/*
-	fpdc  = fopen("dc.txt","w");
+	
+	//fpdc  = fopen("dc.txt","w");
 	fpback  = fopen("back.txt","w");
-	fppwspctrm_dc  = fopen("pwspctrm_dc2.txt","w");
+	/*fppwspctrm_dc  = fopen("pwspctrm_dc2.txt","w");
 	fppwspctrm_phi  = fopen("pwspctrm_phi.txt","w");
 	fpphi = fopen("phi.txt","w");
 	
@@ -263,7 +267,7 @@ void main(int argc, char **argv)
 	fplin = fopen("lpt.txt","w");
 	*/
 
-        int i;
+   
 
        // i = fftw_init_threads();
 	//	fftw_plan_with_nthreads(omp_get_max_threads());
@@ -284,7 +288,7 @@ void main(int argc, char **argv)
 	background(0);
 	initialise();
 	
-
+/*
        i = evolve(a_zels,a0/ai);
 	
        cal_dc();
@@ -298,6 +302,10 @@ void main(int argc, char **argv)
 
 	printf("\nTotal consumed time is %lf\n",(double) ((t_end-t_start)/CLOCKS_PER_SEC));
 
+
+*/
+
+MPI_Finalize();
 
 }
 
@@ -604,7 +612,7 @@ void read_ini_rand_field()
 
 
 void ini_rand_field()
-{	init_genrand(time(0));
+{	//init_genrand(time(0));
 	int i,j,k,ief,jef,kef,cnt,rcnt,rk,ri,rj,maxcnt=0; 
 	double ksqr,muk,sigk;
 	double a1,a2,b1,b2,a,b;
@@ -616,7 +624,7 @@ void ini_rand_field()
 	double zdvfac = -(2.0/3.0)*a_t/(cpmc*Hb0*Hb0);
 
 
-	init_genrand(time(0));
+	//init_genrand(time(0));
 	
 	for(i=0;i<n;++i)
 	{	if(i<=(n/2))
@@ -652,8 +660,8 @@ void ini_rand_field()
 					/(((double) n)*((double) n));
 			    sigk  = sqrt(ini_power_spec(sqrt(ksqr)));
 			    muk = sigk/sqrt(2.0);
-		 	    a1 = genrand_res53();
- 			    a2 = genrand_res53(); 
+		 	   // a1 = genrand_res53();
+ 			    //a2 = genrand_res53(); 
 			   // b1 = genrand_res53();
  			  //  b2 = genrand_res53();
 			    a = (muk*(sqrt(-2.0*log(a1))*cos(2.0*M_PI*a2)));
@@ -867,7 +875,7 @@ void background(int bk)
 		lin_phi = 1.0;
    		lin_delf = 0.0;
    		lin_phi_a =  0.0;
-   		lin_delf_a = 0.0/ini_phi_potn[lin_i];
+   		lin_delf_a = 0.0;///ini_phi_potn[lin_i];
  
 
 
@@ -1116,11 +1124,15 @@ void initialise()
       double Vvlb;
 
     
-      int px,py,pz,ci,pgi,j;
+      int px,py,pz,ci[3],pgi,j,loc_ci[3],cci;
       int xcntr[3]={-1,-1,-1},anchor[3];
       double gamma, v, gradmagf;
       double ktmp,maxkmagsqr = 0.0,minkmagsqr = 1e10;
       double wktmp,shtmp;
+      int tmp_naxis[3];
+	int tmp_naxistart[3];
+	int tmp_naxisend[3];
+      int myloc_count[3];
       a0 = 1.00;
       ai = 0.001;
       a = ai;
@@ -1139,66 +1151,85 @@ void initialise()
 		d1[j] = 12.0*dx[j];
 		d2[j] = 12.0*dx[j]*dx[j];
 
+		
+
 	} 
+
+
+	for(j=0;j<nd_cart;++j)
+	{
+		tmp_naxis[j] = (int)(((double) n_axis[j])/ ((double) dims[j]));
+
+		tmp_naxistart[j] = my_coords[j]*tmp_naxis[j];
+
+		tmp_naxisend[j] = tmp_naxistart[j]+n_axis_loc[j];
+
+		myloc_count[j] = 0;
+
 	
 
-        L[0] = dx[0]*((double) (n));  L[1] = dx[1]*((double) (n));  L[2] = dx[2]*((double) (n));
-	dk = 0.01/dx[0]; kbins = 0;
+	}
+
+
+	if(nd_cart<3)
+	{
+
+		tmp_naxistart[2] = 0;
+
+		tmp_naxisend[2] = tmp_naxistart[2]+n_axis_loc[2];
+
+
+
+	}
+
+	
+
+       // L[0] = dx[0]*((double) (n));  L[1] = dx[1]*((double) (n));  L[2] = dx[2]*((double) (n));
+	//dk = 0.01/dx[0]; kbins = 0;
 	
 	//ini_rand_field();
-	  read_ini_rand_field();
+	 // read_ini_rand_field();
         
-	for(ci = 0;ci <tN; ++ci)
-	{
-		kbincnt[ci]=0;
-	}
+	//for(ci[0] = 0;ci[0] <tN; ++ci[0])
+	//{
+	//	kbincnt[ci]=0;
+	//}
 	
-	for(ci = 0;ci <tN; ++ci)
-	{
-		
-		
-		if((ci%(n*n))==0)
-		 ++xcntr[0];
-		if((ci%(n))==0)
-		 ++xcntr[1];
-		 ++xcntr[2];
-		ktmp=0.0;
-		wktmp = 1.0;
-		shtmp = 1.0;
-		for(j=0;j<3;++j)
-		{	//
-			grid[ci][j] = ((double)(xcntr[j]%n))*dx[j];
+	for(ci[0] = 0,loc_ci[0] = 1;ci[0] <n; ++ci[0])
+	{	
 
-			ind_grid[ci][j] = xcntr[j]%n;
+		if( (ci[0]>=tmp_naxistart[0])&&
+			(ci[0]<tmp_naxisend[0])    )
+		++loc_ci[0];
+		
+	 for(ci[1] = 0,loc_ci[1] = 1;ci[1] <n; ++ci[1])
+	 {
+	   if( (ci[1]>=tmp_naxistart[1])&&
+			(ci[1]<tmp_naxisend[1])    )
+		++loc_ci[1];
+
+	   for(ci[2] = 0,loc_ci[2] = 1;ci[2] <n; ++ci[2])
+	   {
+		if( (ci[2]>=tmp_naxistart[2])&&
+			(ci[2]<tmp_naxisend[2])    )
+		++loc_ci[2];
+		 
+		
+		if(  (ci[0]>=tmp_naxistart[0])&&(ci[1]>=tmp_naxistart[1])&&(ci[2]>=tmp_naxistart[2]) &&
+
+			(ci[0]<tmp_naxisend[0])&&(ci[1]<tmp_naxisend[1])&&(ci[2]<tmp_naxisend[2])     )
+		{ 
+			printf("rank %d cci %d\n",rank,cci);
+			cci = loc_ci[0]*(n_axis_loc[1]+2)*(n_axis_loc[2]+2) + loc_ci[1]*(n_axis_loc[2]+2) + loc_ci[2];
+	          for(j=0;j<3;++j)
+	           {	//
+			grid[j][cci] = ((double)(ci[j]))*dx[j];
+
+			ind_grid[j][cci] = ci[j];
 
 			
 
-			if((xcntr[j]%n)<=(n/2))
-				{
-					
-				 k_grid[ci][j] = ((double)(xcntr[j]%n))/L[j];
-
-				  ktmp+= k_grid[ci][j]*k_grid[ci][j];
-
-					if((xcntr[j]%n)==0)
-					wktmp*=1.0;
-					else
-					wktmp*=(sin((xcntr[j]%n)*dx[j]*0.5/L[j])/((xcntr[j]%n)*dx[j]*0.5/L[j]));
-
-					shtmp*=(1.0   -  (2.0/3.0)*sin((xcntr[j]%n)*dx[j]*0.5/L[j])*sin((xcntr[j]%n)*dx[j]*0.5/L[j]));	
-
-				}
-			else
-				{ 
-				 k_grid[ci][j] = ((double)((xcntr[j]%n)-n))/L[j];
-
-				 ktmp+= k_grid[ci][j]*k_grid[ci][j];
-
-				wktmp*=(sin(((xcntr[j]%n)-n)*dx[j]*0.5/L[j])/(((xcntr[j]%n)-n)*dx[j]*0.5/L[j]));	
-				shtmp*=(1.0 - (2.0/3.0)*sin(((xcntr[j]%n)-n)*dx[j]*0.5/L[j])*sin(((xcntr[j]%n)-n)*dx[j]*0.5/L[j]));
-				  
-				}
-		
+			
 			 
 			
 			
@@ -1207,18 +1238,18 @@ void initialise()
 			//printf("Alert %d  %d\n",j,xcntr[j]);
 
 
-		}
+			}
 		
 		
 		
 
 
-		W_cic[ci] = wktmp*wktmp;
-		C1_cic_shot[ci] =  shtmp;	
+		//W_cic[loc_ci] = wktmp*wktmp;
+		//C1_cic_shot[loc_ci] =  shtmp;	
 		
 	
 			
-		if(ktmp>maxkmagsqr)
+	/*	if(ktmp>maxkmagsqr)
 		maxkmagsqr = (ktmp);
 		if((ktmp>0.0)&&(minkmagsqr>ktmp))
 		minkmagsqr = ktmp;
@@ -1231,26 +1262,28 @@ void initialise()
 		if(kmagrid[ci]>kbins)
 		kbins=kmagrid[ci];
 		
-			
+	*/		
 
-		 phi[ci] = ini_phi_potn[ci];
-		 phi_a[ci] = 0.0;
-		 slip[ci] = 0.0;
-		 slip_a[ci] = 0.0;
-		 tmpslip2[ci] = 0.0;
-		 tmpslip1[ci] = 0.0;
-		 slip_s[0][ci] = 0.0;
-		 slip_s[1][ci] = 0.0;
-		 slip_s[2][ci] = 0.0;
-
+		/* phi[cci] = 0.0;// ini_phi_potn[cci];
+		 phi_a[cci] = 0.0;
+		 slip[cci] = 0.0;
+		 slip_a[cci] = 0.0;
+		 tmpslip2[cci] = 0.0;
+		 tmpslip1[cci] = 0.0;
+		 slip_s[0][cci] = 0.0;
+		 slip_s[1][cci] = 0.0;
+		 slip_s[2][cci] = 0.0;*/
+		}
+	    }
+	  }
 		
 		
       	}
 
-	
+	printf("\nCCI is %d\n",cci);
 
 	 
-	cal_spectrum(ini_density_contrast,fppwspctrm_dc,1);
+	//cal_spectrum(ini_density_contrast,fppwspctrm_dc,1);
 
   
 	a_zels = ai;
@@ -1283,7 +1316,7 @@ void initialise()
  
 //####################################################################################################
 
-	for(ci=0;ci<tN;++ci)
+/*	for(ci=0;ci<tN;++ci)
 	  {
 
 		f[ci] = fb_zeldo;
@@ -1303,9 +1336,9 @@ void initialise()
 
 	    
 	cal_grd_tmunu();
-	     
+*/	     
           
-	
+/*	
 	cal_dc();
 	
 	
@@ -1325,7 +1358,7 @@ void initialise()
 	printf("\n	dx is %.10lf MPc\n",dx[0]*lenfac);
 
 	printf("\n Linear theory kf is %lf kl %lf Mpc %lf  %lf\n",kf,tpie*lenfac/kf,lin_phi,lin_delf);
-	
+*/	
 	
 	
 	  
