@@ -206,8 +206,8 @@ void main(int argc, char **argv)
 	{	
 		if(i<nd_cart)
 		{
-		   double tmp_naxis = (((double) n_axis[i])/ ((double) dims[i]));
-		   n_axis_loc[i] = (int) tmp_naxis;
+		   double temp_naxis = (((double) n_axis[i])/ ((double) dims[i]));
+		   n_axis_loc[i] = (int) temp_naxis;
 
 
 		    if((n_axis[i]%dims[i]) != 0)
@@ -320,7 +320,7 @@ void allocate_fields(int nax[3])
 
 	 	
 	
-	int l = (nax[0]+2)*(nax[1]+2)*(nax[2]+2);
+	int l = (nax[0]+4)*(nax[1]+4)*(nax[2]+4);
 	
 	phi  = calloc(l,sizeof(double));
 	phi_a  = calloc(l,sizeof(double));
@@ -354,6 +354,16 @@ void allocate_fields(int nax[3])
 	tmpslip2  = calloc(l,sizeof(double));
 
 	density_contrast = calloc(l,sizeof(double));
+	
+	int i;
+	
+	for(i=0;i<3;++i)
+	{
+		ind_grid[i] = calloc(l,sizeof(int));
+		grid[i] = calloc(l,sizeof(double));
+		k_grid[i] = calloc(l,sizeof(double));
+	
+	}
 
 
 	printf("Allocated...\n");
@@ -1120,15 +1130,20 @@ void write_fields()
 
 void initialise()
 {
-      int l1,l2,r1,r2;
+      int l1,l2,r1,r2,bog_i;
       double Vvlb;
 
-    
+     
+     //FILE *fpinirand = fopen("initial_rand_field.txt","r");
+     
       int px,py,pz,ci[3],pgi,j,loc_ci[3],cci;
       int xcntr[3]={-1,-1,-1},anchor[3];
       double gamma, v, gradmagf;
       double ktmp,maxkmagsqr = 0.0,minkmagsqr = 1e10;
       double wktmp,shtmp;
+      
+      double ini_density_contrast_read,ini_phi_potn_read;
+      
       int tmp_naxis[3];
 	int tmp_naxistart[3];
 	int tmp_naxisend[3];
@@ -1137,15 +1152,20 @@ void initialise()
       ai = 0.001;
       a = ai;
       omdmbini= (cpmc)*pow((a0/ai),3.0)/(cpmc*a0*a0*a0/(ai*ai*ai) + (1.0-cpmc));
-      printf("omdmbini  %.10lf\n",omdmbini);
+      printf("omdmbini  %.10lf  ndcart %d\n",omdmbini,nd_cart);
 
      a_t=Hi*ai;
 	 
 	lin_i = 10;
 
 	kf = tpie*lenfac/(64.0);
+	
 
 	dx[0] = 1.0; dx[1] =1.0; dx[2] = 1.0;
+	
+	
+	L[0] = dx[0]*((double) (n));  L[1] = dx[1]*((double) (n));  L[2] = dx[2]*((double) (n)); 
+	
 		for(j=0;j<3;++j)
 	{
 		d1[j] = 12.0*dx[j];
@@ -1154,6 +1174,8 @@ void initialise()
 		
 
 	} 
+	
+	
 
 
 	for(j=0;j<nd_cart;++j)
@@ -1165,6 +1187,8 @@ void initialise()
 		tmp_naxisend[j] = tmp_naxistart[j]+n_axis_loc[j];
 
 		myloc_count[j] = 0;
+		
+		printf("rank %d i %d start %d end %d\n",my_corank,j,tmp_naxistart[j],tmp_naxisend[j]);
 
 	
 
@@ -1172,12 +1196,25 @@ void initialise()
 
 
 	if(nd_cart<3)
-	{
+	{	
 
+		if(nd_cart<2)
+		{	
+			tmp_naxistart[1] = 0;
+
+			//tmp_naxisend[1] = tmp_naxistart[1]+n_axis_loc[1];
+		
+		
+		
+		}
+		
+		
 		tmp_naxistart[2] = 0;
 
 		tmp_naxisend[2] = tmp_naxistart[2]+n_axis_loc[2];
-
+			
+		
+	printf("CC %d\t%d\t%d\n",tmp_naxistart[0],tmp_naxistart[1],tmp_naxistart[2]);
 
 
 	}
@@ -1193,100 +1230,11 @@ void initialise()
 	//for(ci[0] = 0;ci[0] <tN; ++ci[0])
 	//{
 	//	kbincnt[ci]=0;
+	
 	//}
 	
-	for(ci[0] = 0,loc_ci[0] = 1;ci[0] <n; ++ci[0])
-	{	
-
-		if( (ci[0]>=tmp_naxistart[0])&&
-			(ci[0]<tmp_naxisend[0])    )
-		++loc_ci[0];
-		
-	 for(ci[1] = 0,loc_ci[1] = 1;ci[1] <n; ++ci[1])
-	 {
-	   if( (ci[1]>=tmp_naxistart[1])&&
-			(ci[1]<tmp_naxisend[1])    )
-		++loc_ci[1];
-
-	   for(ci[2] = 0,loc_ci[2] = 1;ci[2] <n; ++ci[2])
-	   {
-		if( (ci[2]>=tmp_naxistart[2])&&
-			(ci[2]<tmp_naxisend[2])    )
-		++loc_ci[2];
-		 
-		
-		if(  (ci[0]>=tmp_naxistart[0])&&(ci[1]>=tmp_naxistart[1])&&(ci[2]>=tmp_naxistart[2]) &&
-
-			(ci[0]<tmp_naxisend[0])&&(ci[1]<tmp_naxisend[1])&&(ci[2]<tmp_naxisend[2])     )
-		{ 
-			printf("rank %d cci %d\n",rank,cci);
-			cci = loc_ci[0]*(n_axis_loc[1]+2)*(n_axis_loc[2]+2) + loc_ci[1]*(n_axis_loc[2]+2) + loc_ci[2];
-	          for(j=0;j<3;++j)
-	           {	//
-			grid[j][cci] = ((double)(ci[j]))*dx[j];
-
-			ind_grid[j][cci] = ci[j];
-
-			
-
-			
-			 
-			
-			
-			//printf("grid ini  %d  %d  %d %lf\n",ci,j,(xcntr[j]%n),grid[ci][j]);
-			//if(xcntr[j]>n)
-			//printf("Alert %d  %d\n",j,xcntr[j]);
-
-
-			}
-		
-		
-		
-
-
-		//W_cic[loc_ci] = wktmp*wktmp;
-		//C1_cic_shot[loc_ci] =  shtmp;	
-		
 	
-			
-	/*	if(ktmp>maxkmagsqr)
-		maxkmagsqr = (ktmp);
-		if((ktmp>0.0)&&(minkmagsqr>ktmp))
-		minkmagsqr = ktmp;
-		
-
-		kmagrid[ci] = (int)(sqrt(ktmp)/(dk));
-		 //printf("yo  %d  %lf\n",kmagrid[ci],sqrt(ktmp));
-		++kbincnt[kmagrid[ci]];
-
-		if(kmagrid[ci]>kbins)
-		kbins=kmagrid[ci];
-		
-	*/		
-
-		/* phi[cci] = 0.0;// ini_phi_potn[cci];
-		 phi_a[cci] = 0.0;
-		 slip[cci] = 0.0;
-		 slip_a[cci] = 0.0;
-		 tmpslip2[cci] = 0.0;
-		 tmpslip1[cci] = 0.0;
-		 slip_s[0][cci] = 0.0;
-		 slip_s[1][cci] = 0.0;
-		 slip_s[2][cci] = 0.0;*/
-		}
-	    }
-	  }
-		
-		
-      	}
-
-	printf("\nCCI is %d\n",cci);
-
-	 
-	//cal_spectrum(ini_density_contrast,fppwspctrm_dc,1);
-
-  
-	a_zels = ai;
+		a_zels = ai;
 	background(1);
 
 	Vamp = Vamp*Hi*Hi; 
@@ -1316,6 +1264,127 @@ void initialise()
  
 //####################################################################################################
 
+	
+	
+	
+	
+	
+////////////////////////////////////////////3 -loop starts//////////////////////////////////	
+	for(ci[0] = 0,loc_ci[0] = 1;ci[0] <n; ++ci[0])
+	{	//printf("Y0Y0\n");
+
+		if( (ci[0]>=tmp_naxistart[0])&&
+			(ci[0]<tmp_naxisend[0])    )
+		++loc_ci[0];
+		
+	 for(ci[1] = 0,loc_ci[1] = 1;ci[1] <n; ++ci[1])
+	 {
+	   if( (ci[1]>=tmp_naxistart[1])&&
+			(ci[1]<tmp_naxisend[1])    )
+		++loc_ci[1];
+
+	   for(ci[2] = 0,loc_ci[2] = 1;ci[2] <n; ++ci[2])
+	   {
+		if( (ci[2]>=tmp_naxistart[2])&&
+			(ci[2]<tmp_naxisend[2])    )
+		++loc_ci[2];
+		 
+		
+		//  fscanf(fpinirand,"%d\t%lf\t%lf\n",
+		//			&bog_i,&ini_density_contrast_read,&ini_phi_potn_read);
+  
+		
+		if(  (ci[0]>=tmp_naxistart[0])&&(ci[1]>=tmp_naxistart[1])&&(ci[2]>=tmp_naxistart[2]) &&
+
+			(ci[0]<tmp_naxisend[0])&&(ci[1]<tmp_naxisend[1])&&(ci[2]<tmp_naxisend[2])     )
+		{ 
+			
+			cci = loc_ci[0]*(n_axis_loc[1]+2)*(n_axis_loc[2]+2) + loc_ci[1]*(n_axis_loc[2]+2) + loc_ci[2];
+	          for(j=0;j<3;++j)
+	           {	//
+					grid[j][cci] = ((double)(ci[j]))*dx[j];
+
+					ind_grid[j][cci] = ci[j];
+						
+					if(ci[j]<=(n/2))
+					{
+					
+					  k_grid[j][cci] = ( (double) ci[j])/L[j];
+
+				  
+
+					}
+				else
+				 { 
+				 	 k_grid[j][cci] = ((double)(ci[j]-n))/L[j];
+
+				
+				  
+				  }
+		
+
+
+		  }
+		
+		
+		
+
+
+		//W_cic[loc_ci] = wktmp*wktmp;
+		//C1_cic_shot[loc_ci] =  shtmp;	
+		
+	
+			
+	/*	if(ktmp>maxkmagsqr)
+		maxkmagsqr = (ktmp);
+		if((ktmp>0.0)&&(minkmagsqr>ktmp))
+		minkmagsqr = ktmp;
+		
+
+		kmagrid[ci] = (int)(sqrt(ktmp)/(dk));
+		 //printf("yo  %d  %lf\n",kmagrid[ci],sqrt(ktmp));
+		++kbincnt[kmagrid[ci]];
+
+		if(kmagrid[ci]>kbins)
+		kbins=kmagrid[ci];
+		
+	*/		
+		f[cci] = fb_zeldo;
+		f_a[cci] = fb_a_zeldo;
+	
+	     
+		
+
+		tul00[cci]= 0.0;
+		tuldss[cci]=0.0;
+	
+
+		 phi[cci] =  ini_phi_potn_read;
+		 phi_a[cci] = 0.0;
+		 slip[cci] = 0.0;
+		 slip_a[cci] = 0.0;
+		 tmpslip2[cci] = 0.0;
+		 tmpslip1[cci] = 0.0;
+		 slip_s[0][cci] = 0.0;
+		 slip_s[1][cci] = 0.0;
+		 slip_s[2][cci] = 0.0;
+		}
+	    }
+	  }
+		
+		
+   }
+   
+  
+////////////////////////////////////////////////////////////////3-loop ends//////////////////////
+	printf("\nCCI is %d\n",cci);
+
+	 cal_grd_tmunu();
+	//cal_spectrum(ini_density_contrast,fppwspctrm_dc,1);
+
+  
+
+
 /*	for(ci=0;ci<tN;++ci)
 	  {
 
@@ -1338,27 +1407,7 @@ void initialise()
 	cal_grd_tmunu();
 */	     
           
-/*	
-	cal_dc();
-	
-	
-	
-	cal_spectrum(density_contrast,fppwspctrm_dc,2);
-	
 
-	printf("Initialization Complete.\n");
-	printf("\nK details:\n	dk is %lf  per MPc",dk/lenfac);
-	printf("\n Nyquist Wavenumber is %lf",M_PI/dx[0]);
-	printf("\n	Min k_mag is %lf per MPc:: corr lmbda is %.10lf MPc",1.0/(dx[0]*lenfac*((double) n)),dx[0]*lenfac*((double) n));
-	printf("\n	Max k_mag is %lf per MPc:: corr lmbda is %.10lf Mpc",sqrt(maxkmagsqr)/lenfac,lenfac/sqrt(maxkmagsqr));
-	printf("\n	kbins is %d\n",kbins);
-
-	printf("\nLengthscales:");
-	printf("\n	Grid Length is %.5lf MPc",dx[0]*lenfac*((double) n));
-	printf("\n	dx is %.10lf MPc\n",dx[0]*lenfac);
-
-	printf("\n Linear theory kf is %lf kl %lf Mpc %lf  %lf\n",kf,tpie*lenfac/kf,lin_phi,lin_delf);
-*/	
 	
 	
 	  
