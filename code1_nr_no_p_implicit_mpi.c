@@ -1299,7 +1299,7 @@ void initialise()
 			(ci[0]<tmp_naxisend[0])&&(ci[1]<tmp_naxisend[1])&&(ci[2]<tmp_naxisend[2])     )
 		{ 
 			
-			cci = loc_ci[0]*(n_axis_loc[1]+2)*(n_axis_loc[2]+2) + loc_ci[1]*(n_axis_loc[2]+2) + loc_ci[2];
+			cci = loc_ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + loc_ci[1]*(n_axis_loc[2]+4) + loc_ci[2];
 	          for(j=0;j<3;++j)
 	           {	//
 					grid[j][cci] = ((double)(ci[j]))*dx[j];
@@ -1419,9 +1419,9 @@ void initialise()
 
 void slip_fft_cal()
 {    
-	 double kfac,kfac2,tmp,tmptmp,Vvl,V_fvl;
+	 double kfac,kfac2,tmp,tmptmp,Vvl,V_fvl,wl;
 		
-	 int i,l1,l2,r1,r2,j,mm;
+	 int i,l1,l2,r1,r2,j,mm,ci[3],cci;
 
 
 
@@ -1433,26 +1433,35 @@ void slip_fft_cal()
 
 	 #pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl)
 	
-	for(i=0;i<tN;++i)
-	{
-		 
+	 for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
+	  {
+			
+		for(ci[1]=2;ci[1]<(n_axis_loc[1]-2);++ci[1])
+	  	{
+		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
+	  	  {
+	  	   
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
 	
 
 	    		
 	   
 	  
-	    LAPf[i] = 0.0;
+	  	  LAPf[cci] = 0.0;
+	  	  wl = 1;
 	   
-	    for(j=0;j<3;++j)
-	     {	 
+	  for(j=2;j>-1;--j)
+	  {	 
 		
 
+			
+		l1 = cci - wl*(ci[j]) +  wl*(ci[j]-1) ;
+		l2 = cci - wl*(ci[j]) +  wl*(ci[j]-2) ;
+		r1 = cci - wl*(ci[j]) +  wl*(ci[j]+1) ;
+		r2 = cci - wl*(ci[j]) +  wl*(ci[j]+2) ;
 
-		l1 = i + ((n+ind_grid[i][j]-1)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
-		l2 = i + ((n+ind_grid[i][j]-2)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
-		r1 = i + ((n+ind_grid[i][j]+1)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
-		r2 = i + ((n+ind_grid[i][j]+2)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
 
+		wl*=(n_axis_loc[j]+4);
 		//mm = ind_grid[i][j]*(pow(n,2-j));
 
 		//if((l1>tN)&&(l2<0))
@@ -1460,13 +1469,13 @@ void slip_fft_cal()
 
 		
 		
-		f_s[j][i] = (scf_rhs[l2][0]-8.0*scf_rhs[l1][0]+8.0*scf_rhs[r1][0]-scf_rhs[r2][0])/(n3sqrt*d1[j]); 
+		f_s[j][cci] = (scf_rhs[l2][0]-8.0*scf_rhs[l1][0]+8.0*scf_rhs[r1][0]-scf_rhs[r2][0])/(n3sqrt*d1[j]); 
 		
 		
 		
 		
 		
-		LAPf[i] += (-scf_rhs[l2][0]+16.0*scf_rhs[l1][0]-30.0*scf_rhs[i][0]+16.0*scf_rhs[r1][0]-scf_rhs[r2][0])/(n3sqrt*d2[j]); 
+		LAPf[cci] += (-scf_rhs[l2][0]+16.0*scf_rhs[l1][0]-30.0*scf_rhs[i][0]+16.0*scf_rhs[r1][0]-scf_rhs[r2][0])/(n3sqrt*d2[j]); 
 	
 		
 		
@@ -1479,37 +1488,48 @@ void slip_fft_cal()
 
 
 
-		slip_rhs[i][0] =(f_s[0][i]*f_s[1][i]+f_s[1][i]*f_s[2][i]+f_s[2][i]*f_s[0][i])*(1.0+2.0*phi[i])/(Mpl*Mpl);	
-		slip_rhs[i][1] = 0.0;
+		slip_rhs[cci][0] =(f_s[0][cci]*f_s[1][cci]+f_s[1][cci]*f_s[2][cci]+f_s[2][cci]*f_s[0][cci])*(1.0+2.0*phi[cci])/(Mpl*Mpl);	
+		slip_rhs[cci][1] = 0.0;
 
-		f[i] = scf_rhs[i][0]/n3sqrt;
+		f[cci] = scf_rhs[cci][0]/n3sqrt;
 
 		
 	}
+
+   	}	
+	
+   }	
 	
 	//fprintf(fplin,"\n\n\n");
 	
 	fftw_execute(slip_plan_f);
 	//printf("yha tk\n");
  	#pragma omp parallel for private(kfac)
-	for(i=0;i<tN;++i)
-	{
+	 for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
+	  {
+			
+		for(ci[1]=2;ci[1]<(n_axis_loc[1]-2);++ci[1])
+	  	{
+		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
+	  	  {
+	  	   
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
 
-		kfac = tpie*tpie*(k_grid[i][0]*k_grid[i][1]+k_grid[i][1]*k_grid[i][2]+k_grid[i][2]*k_grid[i][0]);
+		kfac = tpie*tpie*(k_grid[cci][0]*k_grid[cci][1]+k_grid[cci][1]*k_grid[cci][2]+k_grid[cci][2]*k_grid[cci][0]);
 	
 		
 		
 		if(kfac>1e-14)
-		{ slip_rhs_ft[i][0] = -slip_rhs_ft[i][0]/(kfac*n3sqrt); 
-		  slip_rhs_ft[i][1] = -slip_rhs_ft[i][1]/(kfac*n3sqrt);
+		{ slip_rhs_ft[cci][0] = -slip_rhs_ft[cci][0]/(kfac*n3sqrt); 
+		  slip_rhs_ft[cci][1] = -slip_rhs_ft[cci][1]/(kfac*n3sqrt);
 
 		}
 		
 		else
 		{ 
 
-		  slip_rhs_ft[i][0] = 0.0;
-		  slip_rhs_ft[i][1] = 0.0;
+		  slip_rhs_ft[cci][0] = 0.0;
+		  slip_rhs_ft[cci][1] = 0.0;
 
 		}
 
@@ -1517,39 +1537,57 @@ void slip_fft_cal()
 		
 
 		
+	 }
 	}
+   } 	
 
 
 	fftw_execute(slip_plan_b);
 	
 	#pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl)
-	for(i=0;i<tN;++i)
-	{
-		tmpslip2[i] = tmpslip1[i];
-		tmpslip1[i] = slip[i]; 
-		slip[i] = slip_rhs[i][0]/n3sqrt ; 
+ for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
+	  {
+			
+		for(ci[1]=2;ci[1]<(n_axis_loc[1]-2);++ci[1])
+	  	{
+		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
+	  	  {
+	  	   
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
+			
+		tmpslip2[cci] = tmpslip1[cci];
+		tmpslip1[cci] = slip[cci]; 
+		slip[cci] = slip_rhs[cci][0]/n3sqrt ; 
 
 
-		slip_a[i] = 0.5*(3.0*slip[i]-4.0*tmpslip1[i]+tmpslip2[i])/da; 
+		slip_a[cci] = 0.5*(3.0*slip[cci]-4.0*tmpslip1[cci]+tmpslip2[cci])/da; 
 
 		
 	
 		
 
 
-		  LAPslip[i] = 0.0;
+		  LAPslip[cci] = 0.0;
 		 
 	  	  
 	    
-	     for(j=0;j<3;++j)
-	     {	 
+	 	  wl = 1;
+	   
+	  for(j=2;j>-1;--j)
+	  {	 
 		
 
+			
+		l1 = cci - wl*(ci[j]) +  wl*(ci[j]-1) ;
+		l2 = cci - wl*(ci[j]) +  wl*(ci[j]-2) ;
+		r1 = cci - wl*(ci[j]) +  wl*(ci[j]+1) ;
+		r2 = cci - wl*(ci[j]) +  wl*(ci[j]+2) ;
 
-		l1 = i + ((n+ind_grid[i][j]-1)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
-		l2 = i + ((n+ind_grid[i][j]-2)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
-		r1 = i + ((n+ind_grid[i][j]+1)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
-		r2 = i + ((n+ind_grid[i][j]+2)%n)*((int)(pow(n,2-j))) - ind_grid[i][j]*((int)(pow(n,2-j)));
+
+		wl*=(n_axis_loc[j]+4);
+
+
+		
 
 		
 		
@@ -1558,10 +1596,10 @@ void slip_fft_cal()
 		
 		
 		
-		LAPslip[i] += (-slip_rhs[l2][0]+16.0*slip_rhs[l1][0]-30.0*slip_rhs[i][0]+16.0*slip_rhs[r1][0]-slip_rhs[r2][0])/(n3sqrt*d2[j]); 
+		LAPslip[cci] += (-slip_rhs[l2][0]+16.0*slip_rhs[l1][0]-30.0*slip_rhs[i][0]+16.0*slip_rhs[r1][0]-slip_rhs[r2][0])/(n3sqrt*d2[j]); 
 		
 		
-		tuldss[i]+=  0.5*(1.0+2.0*phi[i])*f_s[j][i]*f_s[j][i]/(ak*ak)  ;
+		tuldss[cci]+=  0.5*(1.0+2.0*phi[cci])*f_s[j][cci]*f_s[j][cci]/(ak*ak)  ;
 
 		
 		
@@ -1571,14 +1609,16 @@ void slip_fft_cal()
 	     }
 
 //		fprintf(fplin,"%d\t%lf\n",i,LAPf[i]);
-		Vvl = V(f[i]);
+		Vvl = V(f[cci]);
 
 
-		tuldss[i]+=3.0*(Vvl - 0.5*tmpf_a[i]*tmpf_a[i]*a_t*a_t*(1.0-2.0*(phi[i]-slip[i])) - fbdss);
+		tuldss[cci]+=3.0*(Vvl - 0.5*tmpf_a[cci]*tmpf_a[cci]*a_t*a_t*(1.0-2.0*(phi[cci]-slip[cci])) - fbdss);
 
 		
 	}
-
+	
+   }	
+  }
 
 //	fprintf(fplin,"\n\n\n");
   
@@ -1592,7 +1632,7 @@ void slip_fft_cal()
 
 void cal_grd_tmunu()
 {
-	int ci,l1,l2,r1,r2,j;
+	int cci,ci[3],l1,l2,r1,r2,j;
 	double Vvl,V_fvl,fl;
 	
 
@@ -1609,10 +1649,16 @@ void cal_grd_tmunu()
 
 
 	 #pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl,fl)
-	  for(ci=0;ci<tN;++ci)
-	   {
-	 
-
+	 for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
+	  {
+			
+		for(ci[1]=2;ci[1]<(n_axis_loc[1]-2);++ci[1])
+	  	{
+		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
+	  	  {
+	  	   
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
+			
 	    
 
 	   
@@ -1626,23 +1672,6 @@ void cal_grd_tmunu()
 		
 
 
-/*		l1 = ci + ((n+ind_grid[ci][j]-1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
-		l2 = ci + ((n+ind_grid[ci][j]-2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
-		r1 = ci + ((n+ind_grid[ci][j]+1)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
-		r2 = ci + ((n+ind_grid[ci][j]+2)%n)*((int)(pow(n,2-j))) - ind_grid[ci][j]*((int)(pow(n,2-j)));
-
-		
-		
-		
-		phi_s[j][ci] = (phi[l2]-8.0*phi[l1]+8.0*phi[r1]-phi[r2])/(d1[j]);
-		f_s[j][ci] = (f[l2]-8.0*f[l1]+8.0*f[r1]-f[r2])/(d1[j]); 
-		
-		
-		
-		
-		//LAPf[ci] += (-f[l2]+16.0*f[l1]-30.0*f[ci]+16.0*f[r1]-f[r2])/(d2[j]); 
-		
-*/
 
 
 		
@@ -1650,7 +1679,7 @@ void cal_grd_tmunu()
 
 		
 		
-		tuldss[ci]+=  0.5*(1.0+2.0*phi[ci])*f_s[j][ci]*f_s[j][ci]/(a*a)  ;
+		tuldss[cci]+=  0.5*(1.0+2.0*phi[cci])*f_s[j][cci]*f_s[j][cci]/(a*a)  ;
 
 		
 		
@@ -1659,26 +1688,24 @@ void cal_grd_tmunu()
 		
 	     }
 
-		
-		Vvl = V(f[ci]);
-		V_fvl = V_f(f[ci]);
+			Vvl = V(f[cci]);
+		V_fvl = V_f(f[cci]);
 			
 	
 		
 
 
-		fl = ( V_fvl/(a_t*a_t) + 3.0*f_a[ci]/a - 3.0*f_a[ci]*phi_a[ci] - 6.0*(phi[ci]-slip[ci])*f_a[ci]/a 
-				- (phi_a[ci]-slip_a[ci])*f_a[ci]
-				+(f_s[0][ci]*slip_s[0][ci]+f_s[1][ci]*slip_s[1][ci]+f_s[2][ci]*slip_s[2][ci])/(a*a*a_t*a_t) 
-			)/(-1.0+2.0*(phi[ci]-slip[ci]))
-			-a_tt*f_a[ci]/(a_t*a_t)  + 2.0*(LAPf[ci]/a)*(2.0*phi[ci]-slip[ci])/(a*a_t*a_t)  ; 
+		fl = ( V_fvl/(a_t*a_t) + 3.0*f_a[cci]/a - 3.0*f_a[cci]*phi_a[cci] - 6.0*(phi[cci]-slip[cci])*f_a[cci]/a 
+				- (phi_a[cci]-slip_a[cci])*f_a[cci]
+				+(f_s[0][cci]*slip_s[0][cci]+f_s[1][cci]*slip_s[1][cci]+f_s[2][cci]*slip_s[2][cci])/(a*a*a_t*a_t) 
+			)/(-1.0+2.0*(phi[cci]-slip[cci]))
+			-a_tt*f_a[cci]/(a_t*a_t)  + 2.0*(LAPf[cci]/a)*(2.0*phi[cci]-slip[cci])/(a*a_t*a_t)  ; 
 
-		scf_rhs[ci][0] = f[ci] + da*f_a[ci] + 0.5*da*da*fl;	
-		scf_rhs[ci][1] = 0.0;
+		scf_rhs[cci][0] = f[cci] + da*f_a[cci] + 0.5*da*da*fl;	
+		scf_rhs[cci][1] = 0.0;
 
 
-		tuldss[ci]+=3.0*(Vvl - 0.5*f_a[ci]*f_a[ci]*a_t*a_t*(1.0-2.0*(phi[ci]-slip[ci])) - fbdss);
-
+		tuldss[cci]+=3.0*(Vvl - 0.5*f_a[cci]*f_a[cci]*a_t*a_t*(1.0-2.0*(phi[cci]-slip[cci])) - fbdss);
 		
 
 
@@ -1687,6 +1714,8 @@ void cal_grd_tmunu()
 
 
 	  }
+	 }
+	}  
 	
 
 	fftw_execute(scf_plan_f);
@@ -1707,7 +1736,7 @@ int evolve(double aini, double astp)
     double facb1,facb2,Vvl,V_fvl,fb_ak,fbk,omfb,Vvlb,V_fvlb,V_ffvlb,lin_delfac1,lin_delfac2,lin_phiac1,lin_phiac2,lin_delf_ak,lin_phi_ak;
     double w;
 
-    int i,j,lcntr,ci;
+    int i,j,lcntr,cci,ci[3];
 
      ///Watch out for local vs global for parallelization
     double phiacc1[n*n*n],phiacc2[n*n*n],facc1[n*n*n],facc2[n*n*n],kfac2;
@@ -1758,7 +1787,7 @@ int evolve(double aini, double astp)
       lin_phi_ak = lin_phi_a + lin_phiac1*da;
 
          
-	  if(lcntr%jprint==0)
+	  if((lcntr%jprint==0)&&(my_corank==0))
 	  { 
 		 
 
@@ -1773,70 +1802,75 @@ int evolve(double aini, double astp)
 	if((lcntr%jprints==0))
 	   { printf("printing..\n");
 
-		 cal_dc();
-      		 cal_spectrum(density_contrast,fppwspctrm_dc,0);
-		 cal_spectrum(phi,fppwspctrm_phi,0);
-		 write_fields();
+		// cal_dc();
+      	//	 cal_spectrum(density_contrast,fppwspctrm_dc,0);
+		// cal_spectrum(phi,fppwspctrm_phi,0);
+		// write_fields();
 
 
 	  }
 
 		 
 	#pragma omp parallel for private(i,Vvl,V_fvl,kfac2)
-	 for(ci=0;ci<tN;++ci)
+	 for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
 	  {
 			
-
-
+		for(ci[1]=2;ci[1]<(n_axis_loc[1]-2);++ci[1])
+	  	{
+		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
+	  	   {
 /////////////////////phi acceleration calculation Step 1/////////////////////////////////////////////////////////////////////////////////
 
-		//phiacc1 = (1.0/(a_t*a*a_t*a))*(- 2.0*a*phi[ci]*a_tt 
-		//			      -a*a*tuldss[ci]/(6.0*Mpl*Mpl))  -phi[ci]/(a*a) 
-		//				- 3.0*phi_a[ci]/a -phi_a[ci]/a - a_tt*phi_a[ci]/(a_t*a_t);
+		//phiacc1 = (1.0/(a_t*a*a_t*a))*(- 2.0*a*phi[cci]*a_tt 
+		//			      -a*a*tuldss[cci]/(6.0*Mpl*Mpl))  -phi[cci]/(a*a) 
+		//				- 3.0*phi_a[cci]/a -phi_a[cci]/a - a_tt*phi_a[cci]/(a_t*a_t);
 
-		phiacc1[ci] = (a_t*a_t/(a*a) + 2.0*a_tt/a )*(slip[ci]-phi[ci])/(a_t*a_t) + (slip_a[ci]-4.0*phi_a[ci])/a + (1.0/3.0)*LAPslip[ci]/(a*a*a_t*a_t)
-				-(tuldss[ci])/(6.0*Mpl*Mpl*a_t*a_t)   - a_tt*phi_a[ci]/(a_t*a_t);
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
+		
+			phiacc1[cci] = (a_t*a_t/(a*a) + 2.0*a_tt/a )*(slip[cci]-phi[cci])/(a_t*a_t) + (slip_a[cci]-4.0*phi_a[cci])/a + (1.0/3.0)*LAPslip[cci]/(a*a*a_t*a_t)
+					-(tuldss[cci])/(6.0*Mpl*Mpl*a_t*a_t)   - a_tt*phi_a[cci]/(a_t*a_t);
 
 
-			V_fvl = V_f(f[ci]);
-			Vvl = V(f[ci]);
+				V_fvl = V_f(f[cci]);
+				Vvl = V(f[cci]);
 	
-		facc1[ci] = ( (V_fvl/(a_t*a_t) + 3.0*f_a[ci]/a - 3.0*f_a[ci]*phi_a[ci] - 6.0*(phi[ci]-slip[ci])*f_a[ci]/a 
-				- (phi_a[ci]-slip_a[ci])*f_a[ci])/(-1.0+2.0*(phi[ci]-slip[ci]))
-				+(f_s[0][ci]*slip_s[0][ci]+f_s[1][ci]*slip_s[1][ci]+f_s[2][ci]*slip_s[2][ci])/(a*a*a_t*a_t*(-1.0+2.0*(phi[ci]-slip[ci]))) 
-					-(LAPf[ci]/a)*((1.0+2.0*phi[ci])/(-1.0+2.0*(phi[ci]-slip[ci])))/(a*a_t*a_t) )
-			-a_tt*f_a[ci]/(a_t*a_t); 
+			facc1[cci] = ( (V_fvl/(a_t*a_t) + 3.0*f_a[cci]/a - 3.0*f_a[cci]*phi_a[cci] - 6.0*(phi[cci]-slip[cci])*f_a[cci]/a 
+				- (phi_a[cci]-slip_a[cci])*f_a[cci])/(-1.0+2.0*(phi[cci]-slip[cci]))
+				+(f_s[0][cci]*slip_s[0][cci]+f_s[1][cci]*slip_s[1][cci]+f_s[2][cci]*slip_s[2][cci])/(a*a*a_t*a_t*(-1.0+2.0*(phi[cci]-slip[cci]))) 
+					-(LAPf[cci]/a)*((1.0+2.0*phi[cci])/(-1.0+2.0*(phi[cci]-slip[cci])))/(a*a_t*a_t) )
+			-a_tt*f_a[cci]/(a_t*a_t); 
 
 
 		
-		kfac2 = tpie*tpie*(k_grid[ci][0]*k_grid[ci][0]+k_grid[ci][1]*k_grid[ci][1]+k_grid[ci][2]*k_grid[ci][2]);
+			kfac2 = tpie*tpie*(k_grid[cci][0]*k_grid[cci][0]+k_grid[cci][1]*k_grid[cci][1]+k_grid[cci][2]*k_grid[cci][2]);
 	    
-	        scf_rhs_ft[ci][0] = (scf_rhs_ft[ci][0]/n3sqrt)/(1.0+0.5*kfac2*(da/(a_t*a))*(da/(a_t*a))); 
-	        scf_rhs_ft[ci][1] = (scf_rhs_ft[ci][1]/n3sqrt)/(1.0+0.5*kfac2*(da/(a_t*a))*(da/(a_t*a)));
+	        scf_rhs_ft[cci][0] = (scf_rhs_ft[cci][0]/n3sqrt)/(1.0+0.5*kfac2*(da/(a_t*a))*(da/(a_t*a))); 
+	        scf_rhs_ft[cci][1] = (scf_rhs_ft[cci][1]/n3sqrt)/(1.0+0.5*kfac2*(da/(a_t*a))*(da/(a_t*a)));
 
-		//phiacc = (1.0/(2.0*a_t*a*a_t*a))*(-2.0*phi[ci]*a_t*a_t - 4.0*a*phi[ci]*a_tt 
-			//		      -a*a*tuldss[ci]/(3.0*Mpl*Mpl)) - 3.0*phi_a[ci]/a -phi_a[ci]/a - a_tt*phi_a[ci]/(a_t*a_t);
+		//phiacc = (1.0/(2.0*a_t*a*a_t*a))*(-2.0*phi[cci]*a_t*a_t - 4.0*a*phi[cci]*a_tt 
+			//		      -a*a*tuldss[cci]/(3.0*Mpl*Mpl)) - 3.0*phi_a[cci]/a -phi_a[cci]/a - a_tt*phi_a[cci]/(a_t*a_t);
 		
 		
-		phi[ci]  = phi[ci]+da*phi_a[ci]+0.5*da*da*phiacc1[ci];
-		tmpphi_a[ci] = phi_a[ci]+da*phiacc1[ci];
+			phi[cci]  = phi[cci]+da*phi_a[cci]+0.5*da*da*phiacc1[cci];
+			tmpphi_a[cci] = phi_a[cci]+da*phiacc1[cci];
 
-		//f[ci]  = f[ci]+da*f_a[ci]+0.5*da*da*facc1[ci];
-		tmpf_a[ci] = f_a[ci]+da*facc1[ci];
+		//f[cci]  = f[cci]+da*f_a[cci]+0.5*da*da*facc1[cci];
+			tmpf_a[cci] = f_a[cci]+da*facc1[cci];
 
 
-		if(isnan(f[ci]+phi[ci]))
-		{		fail=0;
-			printf("field gone %lf %lf\n",f[ci],phi[ci]);
-
-		}
-		tul00[ci] = 0.0 ;
-		tuldss[ci] = 0.0;
+			if(isnan(f[cci]+phi[cci]))
+			{		fail=0;
+				printf("field gone %lf %lf\n",f[cci],phi[cci]);
+	
+			}
+			tul00[cci] = 0.0 ;
+			tuldss[cci] = 0.0;
 		
 		
 	  }
 
-	
+	 }
+	}	
 		
 	 
 
@@ -1910,52 +1944,59 @@ int evolve(double aini, double astp)
 
 	 
 	#pragma omp parallel for private(i,Vvl,V_fvl)
-	 for(ci=0;ci<tN;++ci)
+	 for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
 	  {
 			
+		for(ci[1]=2;ci[1]<(n_axis_loc[1]-2);++ci[1])
+	  	{
+		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
+	  	  {
+	  	   
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];	  	   
 /////////////////////phi  acceleration calculation Final/////////////////////////////////////////////////////////////////////////////////
 		
-		phiacc2[ci] = (a_t*a_t/(ak*ak) + 2.0*a_tt/ak )*(slip[ci]-phi[ci])/(a_t*a_t) + (slip_a[ci]-4.0*tmpphi_a[ci])/ak 
-				+ (1.0/3.0)*LAPslip[ci]/(ak*ak*a_t*a_t)
-				-(tuldss[ci])/(6.0*Mpl*Mpl*a_t*a_t)   - a_tt*tmpphi_a[ci]/(a_t*a_t);
+				phiacc2[cci] = (a_t*a_t/(ak*ak) + 2.0*a_tt/ak )*(slip[cci]-phi[cci])/(a_t*a_t) + (slip_a[cci]-4.0*tmpphi_a[cci])/ak 
+				+ (1.0/3.0)*LAPslip[cci]/(ak*ak*a_t*a_t)
+				-(tuldss[cci])/(6.0*Mpl*Mpl*a_t*a_t)   - a_tt*tmpphi_a[cci]/(a_t*a_t);
 
 
-		V_fvl = V_f(f[ci]);
-		Vvl = V(f[ci]);
+			V_fvl = V_f(f[cci]);
+			Vvl = V(f[cci]);
 	
-		facc2[ci] = ( (V_fvl/(a_t*a_t) + 3.0*tmpf_a[ci]/ak - 3.0*tmpf_a[ci]*tmpphi_a[ci] - 6.0*(phi[ci]-slip[ci])*tmpf_a[ci]/ak 
-				- (tmpphi_a[ci]-slip_a[ci])*tmpf_a[ci])/(-1.0+2.0*(phi[ci]-slip[ci])) 
-				+(f_s[0][ci]*slip_s[0][ci]+f_s[1][ci]*slip_s[1][ci]+f_s[2][ci]*slip_s[2][ci])/(ak*ak*a_t*a_t*(-1.0+2.0*(phi[ci]-slip[ci]))) 
-					-(LAPf[ci]/ak)*((1.0+2.0*phi[ci])/(-1.0+2.0*(phi[ci]-slip[ci])))/(ak*a_t*a_t) )
-					-a_tt*tmpf_a[ci]/(a_t*a_t); 
+			facc2[cci] = ( (V_fvl/(a_t*a_t) + 3.0*tmpf_a[cci]/ak - 3.0*tmpf_a[cci]*tmpphi_a[cci] - 6.0*(phi[cci]-slip[cci])*tmpf_a[cci]/ak 
+				- (tmpphi_a[cci]-slip_a[cci])*tmpf_a[cci])/(-1.0+2.0*(phi[cci]-slip[cci])) 
+				+(f_s[0][cci]*slip_s[0][cci]+f_s[1][cci]*slip_s[1][cci]+f_s[2][cci]*slip_s[2][cci])/(ak*ak*a_t*a_t*(-1.0+2.0*(phi[cci]-slip[cci]))) 
+					-(LAPf[cci]/ak)*((1.0+2.0*phi[cci])/(-1.0+2.0*(phi[cci]-slip[cci])))/(ak*a_t*a_t) )
+					-a_tt*tmpf_a[cci]/(a_t*a_t); 
 	
 
-		/*facc2[ci] = ( (V_fvl/(a_t*a_t) )/(-1.0+2.0*(phi[ci]-slip[ci])) 
-				+(f_s[0][ci]*slip_s[0][ci]+f_s[1][ci]*slip_s[1][ci]+f_s[2][ci]*slip_s[2][ci])/(ak*ak*a_t*a_t*(-1.0+2.0*(phi[ci]-slip[ci]))) 
-					-(LAPf[ci]/ak)*((1.0+2.0*phi[ci])/(-1.0+2.0*(phi[ci]-slip[ci])))/(ak*a_t*a_t) ); 
+		/*facc2[cci] = ( (V_fvl/(a_t*a_t) )/(-1.0+2.0*(phi[cci]-slip[cci])) 
+				+(f_s[0][cci]*slip_s[0][cci]+f_s[1][cci]*slip_s[1][cci]+f_s[2][cci]*slip_s[2][cci])/(ak*ak*a_t*a_t*(-1.0+2.0*(phi[cci]-slip[cci]))) 
+					-(LAPf[cci]/ak)*((1.0+2.0*phi[cci])/(-1.0+2.0*(phi[cci]-slip[cci])))/(ak*a_t*a_t) ); 
 
 		*/
 
 		
-		//phiacc = (1.0/(2.0*a_t*ak*a_t*ak))*(-2.0*tmpphi[ci]*a_t*a_t - 4.0*ak*tmpphi[ci]*a_tt 
-		//		-ak*ak*tuldss[ci]/(3.0*Mpl*Mpl)) - 3.0*tmpphi_a[ci]/ak -tmpphi_a[ci]/ak - a_tt*tmpphi_a[ci]/(a_t*a_t);
+		//phiacc = (1.0/(2.0*a_t*ak*a_t*ak))*(-2.0*tmpphi[cci]*a_t*a_t - 4.0*ak*tmpphi[cci]*a_tt 
+		//		-ak*ak*tuldss[cci]/(3.0*Mpl*Mpl)) - 3.0*tmpphi_a[cci]/ak -tmpphi_a[cci]/ak - a_tt*tmpphi_a[cci]/(a_t*a_t);
 		
 
 		
 		
-		phi_a[ci] = phi_a[ci]+0.5*da*(phiacc1[ci]+phiacc2[ci]);
-		f_a[ci] = f_a[ci]+da*(facc2[ci]);
-		//f_a[ci] = (f_a[ci]+da*(facc2[ci]))/(1.0 - da*( (3.0/ak - 3.0*phi_a[ci] - 6.0*(phi[ci]-slip[ci])/ak 
-		//		- (phi_a[ci]-slip_a[ci]))/(-1.0+2.0*(phi[ci]-slip[ci])) -a_tt/(a_t*a_t)) );
+			phi_a[cci] = phi_a[cci]+0.5*da*(phiacc1[cci]+phiacc2[cci]);
+			f_a[cci] = f_a[cci]+da*(facc2[cci]);
+		//f_a[cci] = (f_a[cci]+da*(facc2[cci]))/(1.0 - da*( (3.0/ak - 3.0*phi_a[cci] - 6.0*(phi[cci]-slip[cci])/ak 
+		//		- (phi_a[cci]-slip_a[cci]))/(-1.0+2.0*(phi[cci]-slip[cci])) -a_tt/(a_t*a_t)) );
 
- 		if(isnan(phi[ci]+phi_a[ci]))
-		{fail=0; printf("phi_gone  %d  phiacc1  %lf  phiacc2  %lf\n",ci,phiacc1[ci],phiacc2[ci]);
-		}
-		tul00[ci] = 0.0 ;
-		tuldss[ci] = 0.0;
+ 			if(isnan(phi[cci]+phi_a[cci]))
+			{fail=0; printf("phi_gone  %d  phiacc1  %lf  phiacc2  %lf\n",ci,phiacc1[cci],phiacc2[cci]);
+			}
+			tul00[cci] = 0.0 ;
+			tuldss[cci] = 0.0;
 
-
+	  }
 	}
+   }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////Final Tul and phi recosntruction/////////////////////////////////////////////////////////////
 	
