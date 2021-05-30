@@ -1,4 +1,5 @@
 #include <fftw3.h>
+#include <fftw3-mpi.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h> 
@@ -54,6 +55,8 @@ double *phi_s[3],*f_s[3],*slip_s[3],*LAPslip,*LAPf,*tmpslip2,*tmpslip1;
 double *tmpphi,  *tmpf,*tmpphi_a, *tmpf_a, *ini_vel0,*ini_vel1,*ini_vel2,m=1.0;
 double dx[3],d1[3],d2[3];
 double *density_contrast,*ini_density_contrast,*ini_phi_potn;
+double *scf_holder;
+
 /*struct particle
 	{	
 		double x[3];
@@ -172,6 +175,10 @@ void main(int argc, char **argv)
 	mpicheck = MPI_Init(&argc,&argv);
 	mpicheck = MPI_Comm_size(MPI_COMM_WORLD,&num_p);
 	mpicheck = MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+	
+	
+	fftw_mpi_init();
+	
 
 	if(num_p<4)
 		nd_cart = 1;
@@ -207,7 +214,7 @@ void main(int argc, char **argv)
 		if(i<nd_cart)
 		{
 		   double temp_naxis = (((double) n_axis[i])/ ((double) dims[i]));
-		   n_axis_loc[i] = (int) temp_naxis;
+		   n_axis_loc[i] = (int) temp_naxis+1;
 
 
 		    if((n_axis[i]%dims[i]) != 0)
@@ -304,6 +311,7 @@ void main(int argc, char **argv)
 
 
 */
+fftw_mpi_cleanup();
 
 MPI_Finalize();
 
@@ -325,6 +333,7 @@ void allocate_fields(int nax[3])
 	phi  = calloc(l,sizeof(double));
 	phi_a  = calloc(l,sizeof(double));
 	f  = calloc(l,sizeof(double));
+	scf_holder  = calloc(l,sizeof(double));
 	f_a  = calloc(l,sizeof(double));
 	slip  = calloc(l,sizeof(double));
 	slip_a  = calloc(l,sizeof(double));
@@ -378,31 +387,72 @@ void allocate_fft_fields(int nax[3])
 {
 
 	 	
+	 	
+	 	
 	
 	int l = (nax[0]+2)*(nax[1]+2)*(nax[2]+2);
+	
+	const ptrdiff_t n0 = nax[0];
+	const ptrdiff_t n1 = nax[1];
+	const ptrdiff_t n2 = nax[2];
+	
+	
+	fftw_complex *data;
+    ptrdiff_t alloc_local, local_n0, local_0_start;
+	
+	
+	alloc_local = fftw_mpi_local_size_3d(n0, n1, n2,
+                                 cart_comm,
+                                 &local_n0, &local_0_start);
+	
 
 	int a,b,c;
 	a = nax[0]+2;
 	b = nax[1]+2;
 	c = nax[2]+2;
 	
-	F_ini_del = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) *l);
-	ini_del = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
-	F_ini_phi = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
-	ini_phi = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
+
 	
-	slip_rhs = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
-	slip_rhs_ft = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
+	//slip_rhs = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
+	//slip_rhs_ft = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
+	
+	slip_rhs = fftw_alloc_complex(alloc_local);
+	slip_rhs_ft = fftw_alloc_complex(alloc_local);
 
 
-	scf_rhs = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
-	scf_rhs_ft = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
+	//scf_rhs = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
+	//scf_rhs_ft = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * l);
+	
+	
+	scf_rhs = fftw_alloc_complex(alloc_local);
+	scf_rhs_ft = fftw_alloc_complex(alloc_local);
+	
+	
+	
+	
 
-	slip_plan_f = fftw_plan_dft_3d(a,b,c, slip_rhs, slip_rhs_ft, FFTW_FORWARD, FFTW_ESTIMATE);
-	slip_plan_b = fftw_plan_dft_3d(a,b,c, slip_rhs_ft, slip_rhs, FFTW_BACKWARD, FFTW_ESTIMATE);
+	//slip_plan_f = fftw_plan_dft_3d(a,b,c, slip_rhs, slip_rhs_ft, FFTW_FORWARD, FFTW_ESTIMATE);
+	//slip_plan_b = fftw_plan_dft_3d(a,b,c, slip_rhs_ft, slip_rhs, FFTW_BACKWARD, FFTW_ESTIMATE);
+	
+	slip_plan_f = fftw_mpi_plan_dft_3d(n0, n1,  n2,
+                               slip_rhs, slip_rhs_ft,
+                              cart_comm, FFTW_FORWARD, FFTW_ESTIMATE);
+                              
+    slip_plan_b =  fftw_mpi_plan_dft_3d(n0, n1,  n2,
+                              slip_rhs_ft, slip_rhs,
+                              cart_comm, FFTW_BACKWARD, FFTW_ESTIMATE);
+	
 
-	scf_plan_f = fftw_plan_dft_3d(a,b,c, scf_rhs, scf_rhs_ft, FFTW_FORWARD, FFTW_ESTIMATE);
-	scf_plan_b = fftw_plan_dft_3d(a,b,c, scf_rhs_ft, scf_rhs, FFTW_BACKWARD, FFTW_ESTIMATE);
+	//scf_plan_f = fftw_plan_dft_3d(a,b,c, scf_rhs, scf_rhs_ft, FFTW_FORWARD, FFTW_ESTIMATE);
+	//scf_plan_b = fftw_plan_dft_3d(a,b,c, scf_rhs_ft, scf_rhs, FFTW_BACKWARD, FFTW_ESTIMATE);
+	
+	scf_plan_f =  fftw_mpi_plan_dft_3d(n0, n1,  n2,
+                               scf_rhs, scf_rhs_ft,
+                              cart_comm, FFTW_FORWARD, FFTW_ESTIMATE);
+                              
+    scf_plan_b =  fftw_mpi_plan_dft_3d(n0, n1,  n2,
+                              scf_rhs_ft, scf_rhs,
+                              cart_comm, FFTW_BACKWARD, FFTW_ESTIMATE);
 	
 	
 
@@ -1469,13 +1519,14 @@ void slip_fft_cal()
 
 		
 		
-		f_s[j][cci] = (scf_rhs[l2][0]-8.0*scf_rhs[l1][0]+8.0*scf_rhs[r1][0]-scf_rhs[r2][0])/(n3sqrt*d1[j]); 
+		f_s[j][cci] = (scf_holder[l2]-8.0*scf_holder[l1]+8.0*scf_holder[r1]-scf_holder[r2])/(n3sqrt*d1[j]); 
 		
 		
 		
 		
 		
-		LAPf[cci] += (-scf_rhs[l2][0]+16.0*scf_rhs[l1][0]-30.0*scf_rhs[i][0]+16.0*scf_rhs[r1][0]-scf_rhs[r2][0])/(n3sqrt*d2[j]); 
+		LAPf[cci] += (-scf_holder[l2]+16.0*scf_holder[l1]-30.0*scf_holder[i]+16.0*scf_holder[r1]-scf_holder[r2])/(n3sqrt*d2[j]); 
+	
 	
 		
 		
@@ -1703,6 +1754,8 @@ void cal_grd_tmunu()
 
 		scf_rhs[cci][0] = f[cci] + da*f_a[cci] + 0.5*da*da*fl;	
 		scf_rhs[cci][1] = 0.0;
+		
+		scf_holder[cci] = scf_rhs[cci][0];
 
 
 		tuldss[cci]+=3.0*(Vvl - 0.5*f_a[cci]*f_a[cci]*a_t*a_t*(1.0-2.0*(phi[cci]-slip[cci])) - fbdss);
