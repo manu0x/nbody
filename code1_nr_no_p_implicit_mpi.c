@@ -1471,7 +1471,7 @@ void slip_fft_cal()
 {    
 	 double kfac,kfac2,tmp,tmptmp,Vvl,V_fvl,wl;
 		
-	 int i,l1,l2,r1,r2,j,mm,ci[3],cci;
+	 int i,l1,l2,r1,r2,j,mm,ci[3],cci,ccif;
 
 
 
@@ -1482,6 +1482,28 @@ void slip_fft_cal()
 
 
 	 #pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl)
+	 
+	  for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
+	  {
+			
+		for(ci[1]=2;ci[1]<(n_axis_loc[1]-2);++ci[1])
+	  	{
+		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
+	  	  {
+	  	   
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2]+2;
+			ccif = ci[0]*(n_axis_loc[1])*(n_axis_loc[2]) + ci[1]*(n_axis_loc[2]) + ci[2];
+			
+			f[cci] = scf_rhs[ccif][0]/n3sqrt;
+	
+	
+		  }
+		 }
+	   }	  
+	 ///////////////// make f data communication /////
+	 
+	 
+	 /////////////////////////////////////////////////
 	
 	 for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
 	  {
@@ -1491,10 +1513,11 @@ void slip_fft_cal()
 		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
 	  	  {
 	  	   
-			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2]+2;
+			ccif = ci[0]*(n_axis_loc[1])*(n_axis_loc[2]) + ci[1]*(n_axis_loc[2]) + ci[2];
 	
 
-	    		
+	    	
 	   
 	  
 	  	  LAPf[cci] = 0.0;
@@ -1512,40 +1535,23 @@ void slip_fft_cal()
 
 
 		wl*=(n_axis_loc[j]+4);
-		//mm = ind_grid[i][j]*(pow(n,2-j));
-
-		//if((l1>tN)&&(l2<0))
-		//printf(":))))))\n");
-
 		
 		
-		f_s[j][cci] = (scf_holder[l2]-8.0*scf_holder[l1]+8.0*scf_holder[r1]-scf_holder[r2])/(n3sqrt*d1[j]); 
+		f_s[j][cci] = (f[l2]-8.0*f[l1]+8.0*f[r1]-f[r2])/(d1[j]); 
 		
 		
-		
-		
-		
-		LAPf[cci] += (-scf_holder[l2]+16.0*scf_holder[l1]-30.0*scf_holder[i]+16.0*scf_holder[r1]-scf_holder[r2])/(n3sqrt*d2[j]); 
+		LAPf[cci] += (-f[l2]+16.0*f[l1]-30.0*f[i]+16.0*f[r1]-f[r2])/(d2[j]); 
 	
 	
-		
-		
-		
+	  }
+
+		slip_rhs[ccif][0] =(f_s[0][cci]*f_s[1][cci]+f_s[1][cci]*f_s[2][cci]+f_s[2][cci]*f_s[0][cci])*(1.0+2.0*phi[cci])/(Mpl*Mpl);	
+		slip_rhs[ccif][1] = 0.0;
+
 		
 
 		
-		
-	     }
-
-
-
-		slip_rhs[cci][0] =(f_s[0][cci]*f_s[1][cci]+f_s[1][cci]*f_s[2][cci]+f_s[2][cci]*f_s[0][cci])*(1.0+2.0*phi[cci])/(Mpl*Mpl);	
-		slip_rhs[cci][1] = 0.0;
-
-		f[cci] = scf_rhs[cci][0]/n3sqrt;
-
-		
-	}
+	 }
 
    	}	
 	
@@ -1564,23 +1570,24 @@ void slip_fft_cal()
 		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
 	  	  {
 	  	   
-			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2]+2;
+			ccif = ci[0]*(n_axis_loc[1])*(n_axis_loc[2]) + ci[1]*(n_axis_loc[2]) + ci[2];
 
 		kfac = tpie*tpie*(k_grid[cci][0]*k_grid[cci][1]+k_grid[cci][1]*k_grid[cci][2]+k_grid[cci][2]*k_grid[cci][0]);
 	
 		
 		
 		if(kfac>1e-14)
-		{ slip_rhs_ft[cci][0] = -slip_rhs_ft[cci][0]/(kfac*n3sqrt); 
-		  slip_rhs_ft[cci][1] = -slip_rhs_ft[cci][1]/(kfac*n3sqrt);
+		{ slip_rhs_ft[ccif][0] = -slip_rhs_ft[ccif][0]/(kfac*n3sqrt); 
+		  slip_rhs_ft[ccif][1] = -slip_rhs_ft[ccif][1]/(kfac*n3sqrt);
 
 		}
 		
 		else
 		{ 
 
-		  slip_rhs_ft[cci][0] = 0.0;
-		  slip_rhs_ft[cci][1] = 0.0;
+		  slip_rhs_ft[ccif][0] = 0.0;
+		  slip_rhs_ft[ccif][1] = 0.0;
 
 		}
 
@@ -1595,6 +1602,38 @@ void slip_fft_cal()
 
 	fftw_execute(slip_plan_b);
 	
+	
+	
+	for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
+	  {
+			
+		for(ci[1]=2;ci[1]<(n_axis_loc[1]-2);++ci[1])
+	  	{
+		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
+	  	  {
+	  	   
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
+			ccif = ci[0]*(n_axis_loc[1])*(n_axis_loc[2]) + ci[1]*(n_axis_loc[2]) + ci[2];
+			
+			tmpslip2[cci] = tmpslip1[cci];
+		   tmpslip1[cci] = slip[cci]; 
+		   slip[cci] = slip_rhs[ccif][0]/n3sqrt ; 
+
+
+		slip_a[cci] = 0.5*(3.0*slip[cci]-4.0*tmpslip1[cci]+tmpslip2[cci])/da; 
+	
+	
+		  }
+		 }
+	   }
+	
+	
+	////////////////////////make data communication for slip///////////////////////
+	
+	
+	///////////////////////////////////////////////////////////////////////////////
+	
+	
 	#pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl)
  for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
 	  {
@@ -1606,12 +1645,7 @@ void slip_fft_cal()
 	  	   
 			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
 			
-		tmpslip2[cci] = tmpslip1[cci];
-		tmpslip1[cci] = slip[cci]; 
-		slip[cci] = slip_rhs[cci][0]/n3sqrt ; 
-
-
-		slip_a[cci] = 0.5*(3.0*slip[cci]-4.0*tmpslip1[cci]+tmpslip2[cci])/da; 
+		
 
 		
 	
@@ -1626,9 +1660,7 @@ void slip_fft_cal()
 	   
 	  for(j=2;j>-1;--j)
 	  {	 
-		
-
-			
+	
 		l1 = cci - wl*(ci[j]) +  wl*(ci[j]-1) ;
 		l2 = cci - wl*(ci[j]) +  wl*(ci[j]-2) ;
 		r1 = cci - wl*(ci[j]) +  wl*(ci[j]+1) ;
@@ -1638,24 +1670,11 @@ void slip_fft_cal()
 		wl*=(n_axis_loc[j]+4);
 
 
-		
-
-		
-		
-	
-
-		
-		
-		
-		LAPslip[cci] += (-slip_rhs[l2][0]+16.0*slip_rhs[l1][0]-30.0*slip_rhs[i][0]+16.0*slip_rhs[r1][0]-slip_rhs[r2][0])/(n3sqrt*d2[j]); 
+		LAPslip[cci] += (-slip[l2]+16.0*slip[l1]-30.0*slip[i]+16.0*slip[r1]-slip[r2])/(d2[j]); 
 		
 		
 		tuldss[cci]+=  0.5*(1.0+2.0*phi[cci])*f_s[j][cci]*f_s[j][cci]/(ak*ak)  ;
 
-		
-		
-
-		
 		
 	     }
 
@@ -1687,14 +1706,7 @@ void cal_grd_tmunu()
 	double Vvl,V_fvl,fl;
 	
 
-	//for(j=0;j<3;++j)
-	//{
-	//	d1[j] = 12.0*dx[j];
-	//	d2[j] = 12.0*dx[j]*dx[j];
 
-	//} 
-
- 
 
 
 
@@ -1708,35 +1720,18 @@ void cal_grd_tmunu()
 		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
 	  	  {
 	  	   
-			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
-			
-	    
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2]+2;
+			ccif = ci[0]*(n_axis_loc[1])*(n_axis_loc[2]) + ci[1]*(n_axis_loc[2]) + ci[2];
 
-	   
-	   
-	   // LAPf[ci] = 0.0;
-	   // LAPslip[ci] = 0.0;
-	  
 	    
 	     for(j=0;j<3;++j)
 	     {	 
 		
 
-
-
-
-		
-
-
-		
 		
 		tuldss[cci]+=  0.5*(1.0+2.0*phi[cci])*f_s[j][cci]*f_s[j][cci]/(a*a)  ;
 
-		
-		
 
-		
-		
 	     }
 
 			Vvl = V(f[cci]);
@@ -1752,10 +1747,10 @@ void cal_grd_tmunu()
 			)/(-1.0+2.0*(phi[cci]-slip[cci]))
 			-a_tt*f_a[cci]/(a_t*a_t)  + 2.0*(LAPf[cci]/a)*(2.0*phi[cci]-slip[cci])/(a*a_t*a_t)  ; 
 
-		scf_rhs[cci][0] = f[cci] + da*f_a[cci] + 0.5*da*da*fl;	
-		scf_rhs[cci][1] = 0.0;
+		scf_rhs[ccif][0] = f[cci] + da*f_a[cci] + 0.5*da*da*fl;	
+		scf_rhs[ccif][1] = 0.0;
 		
-		scf_holder[cci] = scf_rhs[cci][0];
+
 
 
 		tuldss[cci]+=3.0*(Vvl - 0.5*f_a[cci]*f_a[cci]*a_t*a_t*(1.0-2.0*(phi[cci]-slip[cci])) - fbdss);
@@ -1878,7 +1873,7 @@ int evolve(double aini, double astp)
 		//			      -a*a*tuldss[cci]/(6.0*Mpl*Mpl))  -phi[cci]/(a*a) 
 		//				- 3.0*phi_a[cci]/a -phi_a[cci]/a - a_tt*phi_a[cci]/(a_t*a_t);
 
-			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2]+2;
 		
 			phiacc1[cci] = (a_t*a_t/(a*a) + 2.0*a_tt/a )*(slip[cci]-phi[cci])/(a_t*a_t) + (slip_a[cci]-4.0*phi_a[cci])/a + (1.0/3.0)*LAPslip[cci]/(a*a*a_t*a_t)
 					-(tuldss[cci])/(6.0*Mpl*Mpl*a_t*a_t)   - a_tt*phi_a[cci]/(a_t*a_t);
@@ -2023,16 +2018,7 @@ int evolve(double aini, double astp)
 					-a_tt*tmpf_a[cci]/(a_t*a_t); 
 	
 
-		/*facc2[cci] = ( (V_fvl/(a_t*a_t) )/(-1.0+2.0*(phi[cci]-slip[cci])) 
-				+(f_s[0][cci]*slip_s[0][cci]+f_s[1][cci]*slip_s[1][cci]+f_s[2][cci]*slip_s[2][cci])/(ak*ak*a_t*a_t*(-1.0+2.0*(phi[cci]-slip[cci]))) 
-					-(LAPf[cci]/ak)*((1.0+2.0*phi[cci])/(-1.0+2.0*(phi[cci]-slip[cci])))/(ak*a_t*a_t) ); 
 
-		*/
-
-		
-		//phiacc = (1.0/(2.0*a_t*ak*a_t*ak))*(-2.0*tmpphi[cci]*a_t*a_t - 4.0*ak*tmpphi[cci]*a_tt 
-		//		-ak*ak*tuldss[cci]/(3.0*Mpl*Mpl)) - 3.0*tmpphi_a[cci]/ak -tmpphi_a[cci]/ak - a_tt*tmpphi_a[cci]/(a_t*a_t);
-		
 
 		
 		
