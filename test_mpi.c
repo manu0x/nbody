@@ -8,7 +8,7 @@
 #include <time.h>
 
 
-#define  n 64
+#define  n 10
 
 #define tpie  2.0*M_PI
 
@@ -25,7 +25,9 @@ int rank;
 int nd_cart;
 int *my_coords;
 int my_corank;
-int n_axis_loc[3];
+int n_axis_loc[2];
+
+MPI_Datatype c_x_plain,c_y_plain;
 
 MPI_Comm cart_comm;
 
@@ -38,50 +40,30 @@ double c   = 1.0;
 double Mpl ;
 double lenfac = 1.0;
 double Hb0  ;
-double L[3];
+double L[2];
 int tN;
-int n_axis[3];
+int n_axis[2];
 int fail =1;
 
 clock_t t_start,t_end;
 
 double n3sqrt;
 double *phi, *phi_a,  *f,*f_a,*slip,*slip_a,*tul00,*tuldss,fbdss,fb00;
-double *phi_s[3],*f_s[3],*slip_s[3],*LAPslip,*LAPf,*tmpslip2,*tmpslip1;
+double *phi_s[2],*f_s[2],*slip_s[2],*LAPslip,*LAPf,*tmpslip2,*tmpslip1;
 double *tmpphi,  *tmpf,*tmpphi_a, *tmpf_a, *ini_vel0,*ini_vel1,*ini_vel2,m=1.0;
 double *dx,*d1,*d2;
 double *density_contrast,*ini_density_contrast,*ini_phi_potn;
 
 
-void allocate_fields(int nax[3])
+void allocate_fields(int nax[2])
 {
 
 	 	
 	
-	int l = (nax[0]+2)*(nax[1]+2)*(nax[2]+2);
+	int l = (nax[0]+2)*(nax[1]+2);
 	
 	phi  = calloc(l,sizeof(double));
-	phi_a  = calloc(l,sizeof(double));
-	f  = calloc(l,sizeof(double));
-	f_a  = calloc(l,sizeof(double));
-	slip  = calloc(l,sizeof(double));
-	slip_a  = calloc(l,sizeof(double));
-	tul00  = calloc(l,sizeof(double));
-	tuldss  = calloc(l,sizeof(double));
-
-	phi_s[0]  = calloc(l,sizeof(double));
-	phi_s[1]  = calloc(l,sizeof(double));
-	phi_s[2]  = calloc(l,sizeof(double));
 	
-	f_s[0]  = calloc(l,sizeof(double));
-	f_s[1]  = calloc(l,sizeof(double));
-	f_s[2]  = calloc(l,sizeof(double));
-	
-	
-	slip_s[0]  = calloc(l,sizeof(double));
-	slip_s[1]  = calloc(l,sizeof(double));
-	slip_s[2]  = calloc(l,sizeof(double));
-
 
 
 	
@@ -94,14 +76,14 @@ void allocate_fields(int nax[3])
 	density_contrast = calloc(l,sizeof(double));
 
 
-	printf("Allocated...\n");
+	printf("Allocated...%d\n",l);
 
 
 }
 /*struct particle
 	{	
-		double x[3];
-		double v[3];
+		double x[2];
+		double v[2];
 		
 		
 		int 	cubeind[8];	
@@ -112,9 +94,9 @@ void allocate_fields(int nax[3])
 
 struct particle p[n*n*n],tmpp[n*n*n];
 */
-double *grid[3];
-int *ind_grid[3];
-double *k_grid[3];
+double *grid[2];
+int *ind_grid[2];
+double *k_grid[2];
 int *kmagrid,kbins,*kbincnt;
 double dk; double *pwspctrm;
 double *W_cic,*C1_cic_shot;
@@ -165,15 +147,7 @@ double cpmc = (0.14/(0.68*0.68));
 int jprint,jprints;
 double Hb0, Hi;
 
-FILE *fpback;
-FILE *fp_particles;
-FILE *fpdc;
-FILE *fpphi;
-FILE *fppwspctrm_dc;
-FILE *fppwspctrm_phi;
-FILE *fp_fields;
-FILE *fplinscale;
-FILE *fplin;
+
 
 
 
@@ -186,7 +160,7 @@ void main(int argc, char **argv)
       
 	n_axis[0]=n;
 	n_axis[1]=n;
-	n_axis[2]=n;
+	
 
 
 	mpicheck = MPI_Init(&argc,&argv);
@@ -222,7 +196,7 @@ void main(int argc, char **argv)
 	
 	mpicheck = MPI_Cart_rank(cart_comm,my_coords,&my_corank);
 
-	for(i=0;i<3;++i)
+	for(i=0;i<2;++i)
 	{	
 		if(i<nd_cart)
 		{
@@ -232,7 +206,7 @@ void main(int argc, char **argv)
 
 		    if((n_axis[i]%dims[i]) != 0)
 		     {
-		     
+		     	n_axis_loc[i] +=1;
 			 if(my_coords[i]==(dims[i]-1))
 		      		n_axis_loc[i]+=(n_axis[i]-dims[i]*n_axis_loc[i]);
 
@@ -245,6 +219,12 @@ void main(int argc, char **argv)
 
 
 	}
+	
+	
+  MPI_Type_vector(n_axis_loc[1],1,n_axis_loc[0]+2,MPI_DOUBLE,&c_x_plain);
+  MPI_Type_commit(&c_x_plain);
+  MPI_Type_vector(n_axis_loc[0],1,1,MPI_DOUBLE,&c_y_plain);
+  MPI_Type_commit(&c_y_plain);
 
 	
 
@@ -278,7 +258,7 @@ void printing()
 
 	}
 	
-	printf("\t \t%d\n",my_corank);
+	printf("\tco \t%d\n",my_corank);
 	//printf("nx  %d ny  %d nz  %d\n",n_axis_loc[0],n_axis_loc[1],n_axis_loc[2]);
 	//printf("Local\n");
 	//printf("nx  %d ny  %d nz  %d\n\n\n",n_axis_loc[0],n_axis_loc[1],n_axis_loc[2]);
@@ -296,14 +276,14 @@ void printing2()
 
 
 
-	for(i=0;i<3;++i)
+	for(i=0;i<2;++i)
 	{
 		printf("%d\t",n_axis_loc[i]);
 
 
 	}
 	
-	printf("\t \t%d\n",my_corank);
+	printf("\tco2 \t%d\n",my_corank);
 	//printf("nx  %d ny  %d nz  %d\n",n_axis_loc[0],n_axis_loc[1],n_axis_loc[2]);
 	//printf("Local\n");
 	//printf("nx  %d ny  %d nz  %d\n\n\n",n_axis_loc[0],n_axis_loc[1],n_axis_loc[2]);
@@ -312,6 +292,73 @@ void printing2()
 
 }
 
+
+
+void write_data()
+{
+	int i,j,ci,pr,up,down,left,right;
+	FILE *fp;
+	MPI_Status stup,stdn,stlt,strt;
+	for(i=1;i<n_axis_loc[0]+1;++i)
+	{
+			for(j=1;j<n_axis_loc[1]+1;++j)
+			{
+				ci = (n_axis_loc[1]+2)*i + j;
+				if(ci>1155)
+				printf("ALLLETS %d %d %d\n",i,j,ci);
+			
+				phi[ci] = (double) ((i-1)*n_axis_loc[1]+(j-1));
+	
+			}	
+	}
+
+
+
+
+ for(pr = 0;pr<num_p;++pr)
+ {
+ 
+ 	MPI_Barrier(cart_comm);
+ 	if(pr==my_corank)
+	{ if(my_corank==0)
+	  fp = fopen("tmp.txt","w");
+	  else
+	  fp = fopen("tmp.txt","a");
+	
+	  printf("Writing process %d\n",my_corank);
+	
+	  for(i=0;i<n_axis_loc[0]+2;++i)
+	  {
+			for(j=0;j<n_axis_loc[1]+2;++j)
+			{	ci = (n_axis_loc[1]+2)*i + j;
+				fprintf(fp,"%lf\t",phi[ci]);
+	
+			}
+			
+			fprintf(fp,"\n");	
+	 }
+	 fprintf(fp,"\n\n\n");
+	 fclose(fp);
+  }
+ }
+ 
+ MPI_Cart_shift(cart_comm,0,1,&left,&right)
+ MPI_Cart_shift(cart_comm,1,1,&down,&up)
+ 
+ MPI_Send(&phi[1],1,c_y_plain,up,10,);
+ MPI_Recv(&phi[0],1,c_y_plain,up,11,&stup);
+ 
+ MPI_Send(&(phi[1]+(n_axis_loc[0]+2)*(n_axis_loc[1])),1,c_y_plain,down,11);
+ MPI_Recv(&(phi[0]+(n_axis_loc[0]+2)*(n_axis_loc[1])),1,c_y_plain,down,10,&stdn);
+ 
+ MPI_Send(&(phi[0]+n_axis_loc[0]),1,c_x_plain,right,00);
+ MPI_Recv(&phi[0],1,c_x_plain,right,00);
+ 
+ MPI_Send(&(phi[1]),1,c_x_plain,left,01);
+ 
+ 
+
+}
 
 
 
@@ -345,6 +392,7 @@ for(i=0;i<num_p;++i)
 
 
 allocate_fields(n_axis_loc);
+write_data();
 
 
 MPI_Finalize();
