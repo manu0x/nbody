@@ -27,6 +27,8 @@ int *my_coords;
 int my_corank;
 int n_axis_loc[2];
 
+int * dims , * periods;
+
 MPI_Datatype c_x_plain,c_y_plain;
 
 MPI_Comm cart_comm;
@@ -176,8 +178,8 @@ void main(int argc, char **argv)
 			nd_cart = 3;
 	}
 
-	int * dims = calloc(nd_cart,sizeof(int));
-	int * periods = calloc(nd_cart,sizeof(int));
+	 dims = calloc(nd_cart,sizeof(int));
+	 periods = calloc(nd_cart,sizeof(int));
 	my_coords = calloc(nd_cart,sizeof(int));
 
 	for(i=0;i<nd_cart;++i)
@@ -221,9 +223,9 @@ void main(int argc, char **argv)
 	}
 	
 	
-  MPI_Type_vector(n_axis_loc[1],1,n_axis_loc[0]+2,MPI_DOUBLE,&c_x_plain);
+  MPI_Type_vector(1,n_axis_loc[1],0,MPI_DOUBLE,&c_x_plain);
   MPI_Type_commit(&c_x_plain);
-  MPI_Type_vector(n_axis_loc[0],1,1,MPI_DOUBLE,&c_y_plain);
+  MPI_Type_vector(n_axis_loc[0],1,n_axis_loc[1]+2,MPI_DOUBLE,&c_y_plain);
   MPI_Type_commit(&c_y_plain);
 
 	
@@ -296,7 +298,7 @@ void printing2()
 
 void write_data()
 {
-	int i,j,ci,pr,up,down,left,right;
+	int i,j,ci,pr,up,down,left,right,io,jo;
 	FILE *fp;
 	MPI_Status stup,stdn,stlt,strt;
 	for(i=1;i<n_axis_loc[0]+1;++i)
@@ -307,7 +309,7 @@ void write_data()
 				if(ci>1155)
 				printf("ALLLETS %d %d %d\n",i,j,ci);
 			
-				phi[ci] = (double) ((i-1)*n_axis_loc[1]+(j-1));
+				phi[ci] = 1.0+(double) ((i-1)*n_axis_loc[1]+(j-1));
 	
 			}	
 	}
@@ -315,11 +317,12 @@ void write_data()
 
 
 
- for(pr = 0;pr<num_p;++pr)
+ for(io = 0;io<dims[0];++io)
  {
- 
+  for(jo=0;jo<dims[1];++jo)
+  {
  	MPI_Barrier(cart_comm);
- 	if(pr==my_corank)
+ 	if((io*dims[1]+jo)==my_corank)
 	{ if(my_corank==0)
 	  fp = fopen("tmp.txt","w");
 	  else
@@ -339,23 +342,59 @@ void write_data()
 	 }
 	 fprintf(fp,"\n\n\n");
 	 fclose(fp);
+   }
+ 
   }
  }
  
- MPI_Cart_shift(cart_comm,0,1,&left,&right)
- MPI_Cart_shift(cart_comm,1,1,&down,&up)
+
+ MPI_Cart_shift(cart_comm,1,1,&left,&right);
+ MPI_Cart_shift(cart_comm,0,1,&down,&up);
  
- MPI_Send(&phi[1],1,c_y_plain,up,10,);
- MPI_Recv(&phi[0],1,c_y_plain,up,11,&stup);
+ MPI_Send((phi+(n_axis_loc[1]+2)+1),1,c_x_plain,up,10,cart_comm);
+ MPI_Recv((phi+(n_axis_loc[1]+2)*(n_axis_loc[0]+1)+1),1,c_x_plain,down,10,cart_comm,&stdn);
  
- MPI_Send(&(phi[1]+(n_axis_loc[0]+2)*(n_axis_loc[1])),1,c_y_plain,down,11);
- MPI_Recv(&(phi[0]+(n_axis_loc[0]+2)*(n_axis_loc[1])),1,c_y_plain,down,10,&stdn);
+ MPI_Send((phi+(n_axis_loc[1]+2)*(n_axis_loc[0])+1),1,c_x_plain,down,11,cart_comm);
+ MPI_Recv(phi+1,1,c_x_plain,up,11,cart_comm,&stup);
  
- MPI_Send(&(phi[0]+n_axis_loc[0]),1,c_x_plain,right,00);
- MPI_Recv(&phi[0],1,c_x_plain,right,00);
  
- MPI_Send(&(phi[1]),1,c_x_plain,left,01);
+ MPI_Send((phi+2*n_axis_loc[1]+2),1,c_y_plain,right,00,cart_comm);
+ MPI_Recv((phi+n_axis_loc[1]+2),1,c_y_plain,left,00,cart_comm,&stlt);
  
+ 
+ MPI_Send((phi+n_axis_loc[1]+3),1,c_y_plain,left,01,cart_comm);
+ MPI_Recv((phi+2*n_axis_loc[1]+3),1,c_y_plain,right,01,cart_comm,&strt);
+ 
+ 
+  for(io = 0;io<dims[0];++io)
+ {
+  for(jo=0;jo<dims[1];++jo)
+  {
+ 	MPI_Barrier(cart_comm);
+ 	if((io*dims[1]+jo)==my_corank)
+	{ if(my_corank==0)
+	  fp = fopen("tmp.txt","a");
+	  else
+	  fp = fopen("tmp.txt","a");
+	
+	//  printf("Writing process %d\n",my_corank);
+	
+	  for(i=0;i<n_axis_loc[0]+2;++i)
+	  {
+			for(j=0;j<n_axis_loc[1]+2;++j)
+			{	ci = (n_axis_loc[1]+2)*i + j;
+				fprintf(fp,"%lf\t",phi[ci]);
+	
+			}
+			
+			fprintf(fp,"\n");	
+	 }
+	 fprintf(fp,"\n\n\n");
+	 fclose(fp);
+   }
+ 
+  }
+ }
  
 
 }
