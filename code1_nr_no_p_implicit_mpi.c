@@ -31,6 +31,9 @@ int n_axis_loc[3];
 
 int * dims,*periods;
 
+MPI_Datatype c_x_plain,c_y_plain,c_z_plain;
+MPI_Status stdn,stup;
+
 
 MPI_Comm cart_comm;
 
@@ -234,6 +237,15 @@ void main(int argc, char **argv)
 	}
 
 	
+	
+  MPI_Type_vector(n_axis_loc[1],n_axis_loc[2],n_axis_loc[2]+4,MPI_DOUBLE,&c_x_plain);
+  MPI_Type_commit(&c_x_plain);
+  
+  MPI_Type_vector(n_axis_loc[0],n_axis_loc[2],(n_axis_loc[2]+4)*(n_axis_loc[1]+4),MPI_DOUBLE,&c_y_plain);
+  MPI_Type_commit(&c_y_plain);
+  
+  MPI_Type_vector(n_axis_loc[0]*n_axis_loc[1],1,n_axis_loc[2]+4,MPI_DOUBLE,&c_z_plain);
+  MPI_Type_commit(&c_z_plain);
 
 
 	
@@ -1471,7 +1483,7 @@ void slip_fft_cal()
 {    
 	 double kfac,kfac2,tmp,tmptmp,Vvl,V_fvl,wl;
 		
-	 int i,l1,l2,r1,r2,j,mm,ci[3],cci,ccif;
+	 int i,l1,l2,r1,r2,j,mm,ci[3],cci,ccif,strt,strt_l,r_strt,r_strt_l,up,down;
 
 
 
@@ -1501,6 +1513,27 @@ void slip_fft_cal()
 		 }
 	   }	  
 	 ///////////////// make f data communication /////
+	 
+ strt_l = 2*(n_axis_loc[2]+4)*(n_axis_loc[1]+4)+2*(n_axis_loc[2]+4) + 2;
+ strt = strt_l + (n_axis_loc[2]+4)*(n_axis_loc[1]+4)*(n_axis_loc[0]-1); 
+ 
+ r_strt_l = 2*(n_axis_loc[2]+4) + 2;
+ r_strt = strt + (n_axis_loc[2]+4)*(n_axis_loc[1]+4); 
+
+ MPI_Cart_shift(cart_comm,0,1,&down,&up);
+ 
+ MPI_Send((f+strt),1,c_x_plain,up,01,cart_comm);
+ MPI_Recv((f+r_strt_l),1,c_x_plain,down,01,cart_comm,&stdn);
+ 
+ MPI_Send((f+strt_l),1,c_x_plain,down,00,cart_comm);
+ MPI_Recv(f+r_strt,1,c_x_plain,up,00,cart_comm,&stup);
+ 
+ 
+
+	 
+	 
+	 
+	 
 	 
 	 
 	 /////////////////////////////////////////////////
@@ -1629,7 +1662,11 @@ void slip_fft_cal()
 	
 	
 	////////////////////////make data communication for slip///////////////////////
-	
+ MPI_Send((slip+strt),1,c_x_plain,up,01,cart_comm);
+ MPI_Recv((slip+r_strt_l),1,c_x_plain,down,01,cart_comm,&stdn);
+ 
+ MPI_Send((slip+strt_l),1,c_x_plain,down,00,cart_comm);
+ MPI_Recv(slip+r_strt,1,c_x_plain,up,00,cart_comm,&stup);
 	
 	///////////////////////////////////////////////////////////////////////////////
 	
@@ -1702,7 +1739,7 @@ void slip_fft_cal()
 
 void cal_grd_tmunu()
 {
-	int cci,ci[3],l1,l2,r1,r2,j;
+	int cci,ccif,ci[3],l1,l2,r1,r2,j;
 	double Vvl,V_fvl,fl;
 	
 
