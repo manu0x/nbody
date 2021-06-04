@@ -183,7 +183,7 @@ void main(int argc, char **argv)
 	fftw_mpi_init();
 	
 
-	if(num_p<4)
+	if(num_p<64)
 		nd_cart = 1;
 	else
 	{	if(num_p<20)
@@ -277,13 +277,16 @@ void main(int argc, char **argv)
 	
 	
 	//fpdc  = fopen("dc.txt","w");
-	fpback  = fopen("back.txt","w");
+	
+	if(my_corank==0)
+	{fpback  = fopen("back.txt","w");
+	fplin = fopen("lpt.txt","w");}
 	/*fppwspctrm_dc  = fopen("pwspctrm_dc2.txt","w");
 	fppwspctrm_phi  = fopen("pwspctrm_phi.txt","w");
 	fpphi = fopen("phi.txt","w");
 	
 	fplinscale = fopen("linscale.txt","w");
-	fplin = fopen("lpt.txt","w");
+	
 	*/
 
    
@@ -305,15 +308,23 @@ void main(int argc, char **argv)
       
 	
 	background(0);
-	initialise();
 	
-/*
+//	for(i=0;i<1;++i)
+  //  {	MPI_Barrier(cart_comm);
+    
+  //  	if(my_corank==i)
+    	{printf("Initializing....%d\n",my_corank);
+    	 initialise();
+	
+		}	
+	//}
+
        i = evolve(a_zels,a0/ai);
-	
+/*	
        cal_dc();
        cal_spectrum(density_contrast,fppwspctrm_dc,0);
 	write_fields();
-	
+*/	
 	if(i!=1)
 	printf("\nIt's gone...\n");
 
@@ -322,8 +333,8 @@ void main(int argc, char **argv)
 	printf("\nTotal consumed time is %lf\n",(double) ((t_end-t_start)/CLOCKS_PER_SEC));
 
 
-*/
-fftw_mpi_cleanup();
+
+//fftw_mpi_cleanup();
 
 MPI_Finalize();
 
@@ -1031,7 +1042,7 @@ void background(int bk)
 
 	
 
-	if(j%jprint==0)
+	if((j%jprint==0)&&(my_corank==0))
 	fprintf(fpback,"%lf\t%.10lf\t%.10lf\t%.10lf\t%.10lf\n",a/ai,ommi*ai*ai*ai/(a*a_t*a_t),omfb*a*a/(a_t*a_t),lin_phi,lin_dcm*lin_ini_phi/lin_ini_dcm);
 
 
@@ -1127,7 +1138,7 @@ void background(int bk)
     w = (fb_a*fb_a*a_t*a_t/(2.0*c*c) - Vvl)/(fb_a*fb_a*a_t*a_t/(2.0*c*c) + Vvl);
 
   
-
+	if(my_corank==0)
  	fprintf(fpback,"\n\n\n");
 
 
@@ -1196,7 +1207,7 @@ void initialise()
       double Vvlb;
 
      
-     //FILE *fpinirand = fopen("initial_rand_field.txt","r");
+     FILE *fpinirand = fopen("initial_rand_field.txt","r");
      
       int px,py,pz,ci[3],pgi,j,loc_ci[3],cci;
       int xcntr[3]={-1,-1,-1},anchor[3];
@@ -1352,8 +1363,9 @@ void initialise()
 		++loc_ci[2];
 		 
 		
-		//  fscanf(fpinirand,"%d\t%lf\t%lf\n",
-		//			&bog_i,&ini_density_contrast_read,&ini_phi_potn_read);
+		  fscanf(fpinirand,"%d\t%lf\t%lf\n",
+		  		&bog_i,&ini_density_contrast_read,&ini_phi_potn_read);
+		  		
   
 		
 		if(  (ci[0]>=tmp_naxistart[0])&&(ci[1]>=tmp_naxistart[1])&&(ci[2]>=tmp_naxistart[2]) &&
@@ -1495,15 +1507,15 @@ void slip_fft_cal()
 
 	 #pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl)
 	 
-	  for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
+	  for(ci[0]=2;ci[0]<(n_axis_loc[0]+2);++ci[0])
 	  {
 			
-		for(ci[1]=2;ci[1]<(n_axis_loc[1]-2);++ci[1])
+		for(ci[1]=2;ci[1]<(n_axis_loc[1]+2);++ci[1])
 	  	{
-		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
+		   for(ci[2]=2;ci[2]<(n_axis_loc[2]+2);++ci[2])
 	  	  {
 	  	   
-			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2]+2;
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
 			ccif = ci[0]*(n_axis_loc[1])*(n_axis_loc[2]) + ci[1]*(n_axis_loc[2]) + ci[2];
 			
 			f[cci] = scf_rhs[ccif][0]/n3sqrt;
@@ -1538,15 +1550,15 @@ void slip_fft_cal()
 	 
 	 /////////////////////////////////////////////////
 	
-	 for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
+	 for(ci[0]=2;ci[0]<(n_axis_loc[0]+2);++ci[0])
 	  {
 			
-		for(ci[1]=2;ci[1]<(n_axis_loc[1]-2);++ci[1])
+		for(ci[1]=2;ci[1]<(n_axis_loc[1]+2);++ci[1])
 	  	{
-		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
+		   for(ci[2]=2;ci[2]<(n_axis_loc[2]+2);++ci[2])
 	  	  {
 	  	   
-			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2]+2;
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
 			ccif = ci[0]*(n_axis_loc[1])*(n_axis_loc[2]) + ci[1]*(n_axis_loc[2]) + ci[2];
 	
 
@@ -1595,15 +1607,15 @@ void slip_fft_cal()
 	fftw_execute(slip_plan_f);
 	//printf("yha tk\n");
  	#pragma omp parallel for private(kfac)
-	 for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
+	 for(ci[0]=2;ci[0]<(n_axis_loc[0]+2);++ci[0])
 	  {
 			
-		for(ci[1]=2;ci[1]<(n_axis_loc[1]-2);++ci[1])
+		for(ci[1]=2;ci[1]<(n_axis_loc[1]+2);++ci[1])
 	  	{
-		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
+		   for(ci[2]=2;ci[2]<(n_axis_loc[2]+2);++ci[2])
 	  	  {
 	  	   
-			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2]+2;
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
 			ccif = ci[0]*(n_axis_loc[1])*(n_axis_loc[2]) + ci[1]*(n_axis_loc[2]) + ci[2];
 
 		kfac = tpie*tpie*(k_grid[cci][0]*k_grid[cci][1]+k_grid[cci][1]*k_grid[cci][2]+k_grid[cci][2]*k_grid[cci][0]);
@@ -1637,12 +1649,12 @@ void slip_fft_cal()
 	
 	
 	
-	for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
+	for(ci[0]=2;ci[0]<(n_axis_loc[0]+2);++ci[0])
 	  {
 			
-		for(ci[1]=2;ci[1]<(n_axis_loc[1]-2);++ci[1])
+		for(ci[1]=2;ci[1]<(n_axis_loc[1]+2);++ci[1])
 	  	{
-		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
+		   for(ci[2]=2;ci[2]<(n_axis_loc[2]+2);++ci[2])
 	  	  {
 	  	   
 			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
@@ -1749,16 +1761,16 @@ void cal_grd_tmunu()
 
 
 	 #pragma omp parallel for private(j,l1,l2,r1,r2,Vvl,V_fvl,fl)
-	 for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
+	 for(ci[0]=2;ci[0]<(n_axis_loc[0]+2);++ci[0])
 	  {
 			
-		for(ci[1]=2;ci[1]<(n_axis_loc[1]-2);++ci[1])
+		for(ci[1]=2;ci[1]<(n_axis_loc[1]+2);++ci[1])
 	  	{
-		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
+		   for(ci[2]=2;ci[2]<(n_axis_loc[2]+2);++ci[2])
 	  	  {
 	  	   
-			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2]+2;
-			ccif = ci[0]*(n_axis_loc[1])*(n_axis_loc[2]) + ci[1]*(n_axis_loc[2]) + ci[2];
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
+			ccif = (ci[0]-2)*(n_axis_loc[1])*(n_axis_loc[2]) + (ci[1]-2)*(n_axis_loc[2]) + ci[2]-2;
 
 	    
 	     for(j=0;j<3;++j)
@@ -1821,7 +1833,7 @@ int evolve(double aini, double astp)
     double facb1,facb2,Vvl,V_fvl,fb_ak,fbk,omfb,Vvlb,V_fvlb,V_ffvlb,lin_delfac1,lin_delfac2,lin_phiac1,lin_phiac2,lin_delf_ak,lin_phi_ak;
     double w;
 
-    int i,j,lcntr,cci,ci[3];
+    int i,j,lcntr,cci,ccif,ci[3];
 
      ///Watch out for local vs global for parallelization
     double phiacc1[n*n*n],phiacc2[n*n*n],facc1[n*n*n],facc2[n*n*n],kfac2;
@@ -1870,16 +1882,18 @@ int evolve(double aini, double astp)
       lin_delf_ak = lin_delf_a + lin_delfac1*da;
       lin_phi = lin_phi + lin_phi_a*da + 0.5*lin_phiac1*da*da;
       lin_phi_ak = lin_phi_a + lin_phiac1*da;
+      
+     
 
          
 	  if((lcntr%jprint==0)&&(my_corank==0))
 	  { 
 		 
 
-		fprintf(fpback,"%lf\t%.10lf\t%.10lf\n",a/ai,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t),omfb*a*a/(a_t*a_t));
-		fprintf(fplin,"%lf\t%.20lf\t%.20lf\n",a/ai,lin_growth,lin_phi);
-		printf("a  %lf %.10lf  %.10lf\n",a,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t),omfb);
-		fflush(stdout);
+		//fprintf(fpback,"%lf\t%.10lf\t%.10lf\n",a/ai,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t),omfb*a*a/(a_t*a_t));
+		//fprintf(fplin,"%lf\t%.20lf\t%.20lf\n",a/ai,lin_growth,lin_phi);
+		//printf("a  %lf %.10lf  %.10lf\n",a,ommi*ai*ai*ai*Hi*Hi/(a*a_t*a_t),omfb);
+		//fflush(stdout);
 	
 		}
 
@@ -1897,20 +1911,21 @@ int evolve(double aini, double astp)
 
 		 
 	#pragma omp parallel for private(i,Vvl,V_fvl,kfac2)
-	 for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
-	  {
+	 for(ci[0]=2;ci[0]<(n_axis_loc[0]+2);++ci[0])
+	  { 
 			
-		for(ci[1]=2;ci[1]<(n_axis_loc[1]-2);++ci[1])
+		for(ci[1]=2;ci[1]<(n_axis_loc[1]+2);++ci[1])
 	  	{
-		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
+		   for(ci[2]=2;ci[2]<(n_axis_loc[2]+2);++ci[2])
 	  	   {
 /////////////////////phi acceleration calculation Step 1/////////////////////////////////////////////////////////////////////////////////
-
+	
 		//phiacc1 = (1.0/(a_t*a*a_t*a))*(- 2.0*a*phi[cci]*a_tt 
 		//			      -a*a*tuldss[cci]/(6.0*Mpl*Mpl))  -phi[cci]/(a*a) 
 		//				- 3.0*phi_a[cci]/a -phi_a[cci]/a - a_tt*phi_a[cci]/(a_t*a_t);
 
-			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2]+2;
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
+			ccif = (ci[0]-2)*(n_axis_loc[1])*(n_axis_loc[2]) + (ci[1]-2)*(n_axis_loc[2]) + ci[2]-2;
 		
 			phiacc1[cci] = (a_t*a_t/(a*a) + 2.0*a_tt/a )*(slip[cci]-phi[cci])/(a_t*a_t) + (slip_a[cci]-4.0*phi_a[cci])/a + (1.0/3.0)*LAPslip[cci]/(a*a*a_t*a_t)
 					-(tuldss[cci])/(6.0*Mpl*Mpl*a_t*a_t)   - a_tt*phi_a[cci]/(a_t*a_t);
@@ -1925,12 +1940,12 @@ int evolve(double aini, double astp)
 					-(LAPf[cci]/a)*((1.0+2.0*phi[cci])/(-1.0+2.0*(phi[cci]-slip[cci])))/(a*a_t*a_t) )
 			-a_tt*f_a[cci]/(a_t*a_t); 
 
-
+			printf("YYYYYYY  %d\n",ccif);
 		
 			kfac2 = tpie*tpie*(k_grid[cci][0]*k_grid[cci][0]+k_grid[cci][1]*k_grid[cci][1]+k_grid[cci][2]*k_grid[cci][2]);
 	    
-	        scf_rhs_ft[cci][0] = (scf_rhs_ft[cci][0]/n3sqrt)/(1.0+0.5*kfac2*(da/(a_t*a))*(da/(a_t*a))); 
-	        scf_rhs_ft[cci][1] = (scf_rhs_ft[cci][1]/n3sqrt)/(1.0+0.5*kfac2*(da/(a_t*a))*(da/(a_t*a)));
+	        scf_rhs_ft[ccif][0] = (scf_rhs_ft[ccif][0]/n3sqrt)/(1.0+0.5*kfac2*(da/(a_t*a))*(da/(a_t*a))); 
+	        scf_rhs_ft[ccif][1] = (scf_rhs_ft[ccif][1]/n3sqrt)/(1.0+0.5*kfac2*(da/(a_t*a))*(da/(a_t*a)));
 
 		//phiacc = (1.0/(2.0*a_t*a*a_t*a))*(-2.0*phi[cci]*a_t*a_t - 4.0*a*phi[cci]*a_tt 
 			//		      -a*a*tuldss[cci]/(3.0*Mpl*Mpl)) - 3.0*phi_a[cci]/a -phi_a[cci]/a - a_tt*phi_a[cci]/(a_t*a_t);
@@ -2029,15 +2044,16 @@ int evolve(double aini, double astp)
 
 	 
 	#pragma omp parallel for private(i,Vvl,V_fvl)
-	 for(ci[0]=2;ci[0]<(n_axis_loc[0]-2);++ci[0])
+	 for(ci[0]=2;ci[0]<(n_axis_loc[0]+2);++ci[0])
 	  {
 			
-		for(ci[1]=2;ci[1]<(n_axis_loc[1]-2);++ci[1])
+		for(ci[1]=2;ci[1]<(n_axis_loc[1]+2);++ci[1])
 	  	{
-		   for(ci[2]=2;ci[2]<(n_axis_loc[2]-2);++ci[2])
+		   for(ci[2]=2;ci[2]<(n_axis_loc[2]+2);++ci[2])
 	  	  {
 	  	   
-			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];	  	   
+			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];	  	  
+			ccif = (ci[0]-2)*(n_axis_loc[1])*(n_axis_loc[2]) + (ci[1]-2)*(n_axis_loc[2]) + ci[2]-2; 
 /////////////////////phi  acceleration calculation Final/////////////////////////////////////////////////////////////////////////////////
 		
 				phiacc2[cci] = (a_t*a_t/(ak*ak) + 2.0*a_tt/ak )*(slip[cci]-phi[cci])/(a_t*a_t) + (slip_a[cci]-4.0*tmpphi_a[cci])/ak 
