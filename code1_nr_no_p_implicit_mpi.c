@@ -355,7 +355,11 @@ void allocate_fields(int nax[3])
 	
 	phi  = calloc(l,sizeof(double));
 	phi_a  = calloc(l,sizeof(double));
+	tmpphi  = calloc(l,sizeof(double));
+	tmpphi_a  = calloc(l,sizeof(double));
 	f  = calloc(l,sizeof(double));
+	tmpf  = calloc(l,sizeof(double));
+	tmpf_a  = calloc(l,sizeof(double));
 	scf_holder  = calloc(l,sizeof(double));
 	f_a  = calloc(l,sizeof(double));
 	slip  = calloc(l,sizeof(double));
@@ -1496,6 +1500,8 @@ void slip_fft_cal()
 	 double kfac,kfac2,tmp,tmptmp,Vvl,V_fvl,wl;
 		
 	 int i,l1,l2,r1,r2,j,mm,ci[3],cci,ccif,strt,strt_l,r_strt,r_strt_l,up,down;
+	 
+	 MPI_Request req_send[2],req_rec[2];
 
 
 
@@ -1532,16 +1538,18 @@ void slip_fft_cal()
  r_strt_l = 2*(n_axis_loc[2]+4) + 2;
  r_strt = strt + (n_axis_loc[2]+4)*(n_axis_loc[1]+4); 
 
+ 
  MPI_Cart_shift(cart_comm,0,1,&down,&up);
- 
- MPI_Send((f+strt),1,c_x_plain,up,01,cart_comm);
- MPI_Recv((f+r_strt_l),1,c_x_plain,down,01,cart_comm,&stdn);
- 
- MPI_Send((f+strt_l),1,c_x_plain,down,00,cart_comm);
- MPI_Recv(f+r_strt,1,c_x_plain,up,00,cart_comm,&stup);
- 
- 
+ //printf("YYYYYYY  %d\n",my_corank);
+ MPI_Isend((f+strt),1,c_x_plain,up,01,cart_comm,&req_send[0]);
+ MPI_Irecv((f+r_strt_l),1,c_x_plain,down,01,cart_comm,&req_rec[0]);
 
+ MPI_Isend((f+strt_l),1,c_x_plain,down,00,cart_comm,&req_send[1]);
+ MPI_Irecv(f+r_strt,1,c_x_plain,up,00,cart_comm,&req_rec[1]);
+ 
+ 
+MPI_Waitall(2,req_rec,MPI_STATUSES_IGNORE);
+// printf("ZZZZ  comm done by %d\n",my_corank);
 	 
 	 
 	 
@@ -1585,7 +1593,7 @@ void slip_fft_cal()
 		f_s[j][cci] = (f[l2]-8.0*f[l1]+8.0*f[r1]-f[r2])/(d1[j]); 
 		
 		
-		LAPf[cci] += (-f[l2]+16.0*f[l1]-30.0*f[i]+16.0*f[r1]-f[r2])/(d2[j]); 
+		LAPf[cci] += (-f[l2]+16.0*f[l1]-30.0*f[cci]+16.0*f[r1]-f[r2])/(d2[j]); 
 	
 	
 	  }
@@ -1618,7 +1626,7 @@ void slip_fft_cal()
 			cci = ci[0]*(n_axis_loc[1]+4)*(n_axis_loc[2]+4) + ci[1]*(n_axis_loc[2]+4) + ci[2];
 			ccif = ci[0]*(n_axis_loc[1])*(n_axis_loc[2]) + ci[1]*(n_axis_loc[2]) + ci[2];
 
-		kfac = tpie*tpie*(k_grid[cci][0]*k_grid[cci][1]+k_grid[cci][1]*k_grid[cci][2]+k_grid[cci][2]*k_grid[cci][0]);
+		kfac = tpie*tpie*(k_grid[0][cci]*k_grid[1][cci]+k_grid[1][cci]*k_grid[2][cci]+k_grid[2][cci]*k_grid[0][cci]);
 	
 		
 		
@@ -1674,12 +1682,13 @@ void slip_fft_cal()
 	
 	
 	////////////////////////make data communication for slip///////////////////////
- MPI_Send((slip+strt),1,c_x_plain,up,01,cart_comm);
- MPI_Recv((slip+r_strt_l),1,c_x_plain,down,01,cart_comm,&stdn);
+ MPI_Isend((slip+strt),1,c_x_plain,up,01,cart_comm,&req_send[0]);
+ MPI_Irecv((slip+r_strt_l),1,c_x_plain,down,01,cart_comm,&req_rec[0]);
  
- MPI_Send((slip+strt_l),1,c_x_plain,down,00,cart_comm);
- MPI_Recv(slip+r_strt,1,c_x_plain,up,00,cart_comm,&stup);
+ MPI_Isend((slip+strt_l),1,c_x_plain,down,00,cart_comm,&req_send[1]);
+ MPI_Irecv(slip+r_strt,1,c_x_plain,up,00,cart_comm,&req_rec[1]);
 	
+MPI_Waitall(2,req_rec,MPI_STATUSES_IGNORE);	
 	///////////////////////////////////////////////////////////////////////////////
 	
 	
@@ -1719,7 +1728,7 @@ void slip_fft_cal()
 		wl*=(n_axis_loc[j]+4);
 
 
-		LAPslip[cci] += (-slip[l2]+16.0*slip[l1]-30.0*slip[i]+16.0*slip[r1]-slip[r2])/(d2[j]); 
+		LAPslip[cci] += (-slip[l2]+16.0*slip[l1]-30.0*slip[cci]+16.0*slip[r1]-slip[r2])/(d2[j]); 
 		
 		
 		tuldss[cci]+=  0.5*(1.0+2.0*phi[cci])*f_s[j][cci]*f_s[j][cci]/(ak*ak)  ;
@@ -1940,9 +1949,9 @@ int evolve(double aini, double astp)
 					-(LAPf[cci]/a)*((1.0+2.0*phi[cci])/(-1.0+2.0*(phi[cci]-slip[cci])))/(a*a_t*a_t) )
 			-a_tt*f_a[cci]/(a_t*a_t); 
 
-			printf("YYYYYYY  %d\n",ccif);
+			
 		
-			kfac2 = tpie*tpie*(k_grid[cci][0]*k_grid[cci][0]+k_grid[cci][1]*k_grid[cci][1]+k_grid[cci][2]*k_grid[cci][2]);
+			kfac2 = tpie*tpie*(k_grid[0][cci]*k_grid[0][cci]+k_grid[1][cci]*k_grid[1][cci]+k_grid[2][cci]*k_grid[2][cci]);
 	    
 	        scf_rhs_ft[ccif][0] = (scf_rhs_ft[ccif][0]/n3sqrt)/(1.0+0.5*kfac2*(da/(a_t*a))*(da/(a_t*a))); 
 	        scf_rhs_ft[ccif][1] = (scf_rhs_ft[ccif][1]/n3sqrt)/(1.0+0.5*kfac2*(da/(a_t*a))*(da/(a_t*a)));
