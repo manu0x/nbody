@@ -260,7 +260,7 @@ void main(int argc, char **argv)
 
         da = 1e-5;
         jprint = (int) (0.001/da);
-	jprints = 200*jprint;
+	jprints = jprint;
 	
 	tN=(n_axis_loc[0]+2)*(n_axis_loc[1]+2)*(n_axis_loc[2]+2);
 
@@ -1549,7 +1549,7 @@ void slip_fft_cal()
  
  
 MPI_Waitall(2,req_rec,MPI_STATUSES_IGNORE);
-// printf("ZZZZ  comm done by %d\n",my_corank);
+ //printf("ZZZZ  comm done by %d\n",my_corank);
 	 
 	 
 	 
@@ -1908,7 +1908,7 @@ int evolve(double aini, double astp)
 
 	
 	if((lcntr%jprints==0))
-	   { printf("printing..\n");
+	   { printf("printing.. %d  %lf\n",my_corank,a/ai);
 
 		// cal_dc();
       	//	 cal_spectrum(density_contrast,fppwspctrm_dc,0);
@@ -2006,8 +2006,7 @@ int evolve(double aini, double astp)
 	
 	
 
-
-
+	
 		
  
 	
@@ -2090,7 +2089,7 @@ int evolve(double aini, double astp)
 		//		- (phi_a[cci]-slip_a[cci]))/(-1.0+2.0*(phi[cci]-slip[cci])) -a_tt/(a_t*a_t)) );
 
  			if(isnan(phi[cci]+phi_a[cci]))
-			{fail=0; printf("phi_gone  %d  phiacc1  %lf  phiacc2  %lf\n",ci,phiacc1[cci],phiacc2[cci]);
+			{fail=0; printf("phi_gone  %d  phiacc1  %lf  phiacc2  %lf\n",cci,phiacc1[cci],phiacc2[cci]);
 			}
 			tul00[cci] = 0.0 ;
 			tuldss[cci] = 0.0;
