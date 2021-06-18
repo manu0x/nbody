@@ -6,6 +6,7 @@
 #include <mpi.h>
 #include <fenv.h>
 #include <time.h>
+#include <hdf5.h>
 
 
 #define  n 10
@@ -35,6 +36,20 @@ MPI_Comm cart_comm;
 
 
 //////////////////////////////////////////////
+
+hid_t file_id;
+herr_t status;
+hid_t p_list;
+
+
+hid_t data_sp,data_tp,dataset;
+
+
+
+
+
+
+/////////////////////////////////////////////////////
 
 
 double G   = 1.0;
@@ -159,15 +174,22 @@ void main(int argc, char **argv)
 
 
 	int i;
+	
+	
       
 	n_axis[0]=n;
 	n_axis[1]=n;
 	
 
+	 MPI_Info info  = MPI_INFO_NULL;
+
 
 	mpicheck = MPI_Init(&argc,&argv);
 	mpicheck = MPI_Comm_size(MPI_COMM_WORLD,&num_p);
 	mpicheck = MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+	
+	
+	
 
 	if(num_p<4)
 		nd_cart = 1;
@@ -197,6 +219,9 @@ void main(int argc, char **argv)
 	mpicheck = MPI_Cart_get(cart_comm,nd_cart,dims,periods,my_coords);
 	
 	mpicheck = MPI_Cart_rank(cart_comm,my_coords,&my_corank);
+	
+	
+	
 
 	for(i=0;i<2;++i)
 	{	
@@ -229,6 +254,14 @@ void main(int argc, char **argv)
   MPI_Type_commit(&c_y_plain);
 
 	
+	
+	p_list = H5Pcreate(H5P_FILE_ACCESS);
+	status = H5Pset_fapl_mpio(p_list, cart_comm, info);
+	
+	file_id = H5Fcreate("checkp.txt",H5F_ACC_TRUNC,H5P_DEFAULT,p_list);
+	
+	status = H5Pclose(p_list);
+	status = H5Fclose(file_id);
 
 	
 
